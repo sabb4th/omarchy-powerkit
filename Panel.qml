@@ -1,0 +1,55 @@
+import QtQuick
+import qs.Commons as Commons
+import qs.Ui as Ui
+import "." as Local
+
+Ui.Panel {
+    id: root
+    moduleName: "local.battery-studio"
+    manageIpc: false
+    property var anchorItem: null
+    property var hostWidget: null
+    property bool countedOpen: false
+    onOpenedChanged: {
+        if (countedOpen !== opened) {
+            Local.BatteryModel.panelVisible(opened)
+            countedOpen = opened
+        }
+    }
+    Component.onDestruction: {
+        if (countedOpen) Local.BatteryModel.panelVisible(false)
+    }
+    function switchPanel(direction) {
+        if (bar && typeof bar.switchPanelFrom === "function")
+            return bar.switchPanelFrom(hostWidget || root, direction)
+        return false
+    }
+    Ui.KeyboardPanel {
+        id: surface
+        anchorItem: root.anchorItem
+        owner: root.hostWidget || root
+        bar: root.bar
+        open: root.opened
+        focusTarget: keys
+        contentWidth: fittedContentWidth(Commons.Style.space(640))
+        contentHeight: fittedContentHeight(Commons.Style.space(660))
+        Ui.PanelKeyCatcher {
+            id: keys
+            anchors.fill: parent
+            onCloseRequested: root.close()
+            onTabRequested: function(direction) { root.switchPanel(direction) }
+            Local.Dashboard {
+                anchors.fill: parent
+                backend: Local.BatteryModel
+                foreground: Commons.Color.popups.text
+                background: Commons.Color.popups.background
+                accent: Commons.Color.accent
+                muted: Commons.Color.muted
+                urgent: Commons.Color.urgent
+                fontFamily: root.bar ? root.bar.fontFamily : Commons.Style.font.family
+                scaleFactor: Commons.Style.font.body / 12
+                cornerRadius: Commons.Style.cornerRadius
+            }
+        }
+    }
+}

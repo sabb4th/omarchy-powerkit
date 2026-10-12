@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "local.battery-studio",
+  "name": "Battery Studio",
+  "version": "1.0.0",
+  "author": "Ângela Sabát",
+  "license": "MIT",
+  "description": "Painel de bateria e TLP: potência, autonomia, saúde, limites de carga, perfis e histórico local.",
+  "kinds": ["bar-widget"],
+  "entryPoints": {"barWidget": "BarWidget.qml"},
+  "barWidget": {
+    "displayName": "Battery Studio · TLP",
+    "category": "Power",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {"showWatts": true, "showPercentage": true},
+    "schema": [
+      {"key": "showWatts", "type": "boolean", "label": "Mostrar watts na barra"},
+      {"key": "showPercentage", "type": "boolean", "label": "Mostrar porcentagem"}
+    ]
+  }
+}
