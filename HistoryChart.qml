@@ -1,9 +1,11 @@
 import QtQuick
+import "I18n.js" as Locale
 
 Item {
     id: chart
     property var dataset: ({points: [], from: 0, to: 0, gap: 180})
     property string metric: "percent"
+    property string language: "pt"
     property color foreground: "#d6d8de"
     property color accent: "#8ba4b8"
     property color muted: "#80858d"
@@ -26,6 +28,7 @@ Item {
     readonly property real start: dataset.from || (points.length ? points[0].ts : 0)
     readonly property real end: Math.max(start + 1, dataset.to || (points.length ? points[points.length-1].ts : 1))
 
+    function tr(text) { return Locale.tr(text, language) }
     function extrema(maximum) {
         var values = []
         for (var i = 0; i < points.length; ++i) {
@@ -123,8 +126,8 @@ Item {
         text: chart.hoveredIndex >= 0 && chart.hoveredIndex < chart.points.length ?
               chart.timestamp(chart.points[chart.hoveredIndex].ts, true) + "  ·  " +
               chart.display(chart.points[chart.hoveredIndex][chart.metric]) :
-              chart.metric === "power" ? "Descarga (+) · Carga (−)" :
-              chart.metric === "health" ? "Capacidade atual / de fábrica" : "Carga da bateria"
+              chart.metric === "power" ? tr("Descarga (+) · Carga (−)") :
+              chart.metric === "health" ? tr("Capacidade atual / de fábrica") : tr("Carga da bateria")
         font.family: chart.fontFamily
         font.pixelSize: 11*chart.scaleFactor
         color: chart.foreground
@@ -133,7 +136,7 @@ Item {
     }
     Text {
         anchors.centerIn: parent
-        text: chart.points.length ? "" : "O histórico começa com o uso do plugin."
+        text: chart.points.length ? "" : tr("O histórico começa com o uso do plugin.")
         font.family: chart.fontFamily
         font.pixelSize: 12*chart.scaleFactor
         color: chart.muted

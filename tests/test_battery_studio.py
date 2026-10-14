@@ -15,6 +15,7 @@ import domain as d
 import backend
 import control
 import setup as installer
+import i18n
 
 THINKPAD = """
 +++ Battery Care
@@ -234,6 +235,14 @@ class HistoryTests(unittest.TestCase):
         self.history.record(self.sample(self.now, 7))
         self.assertEqual(self.history.db.execute("SELECT COUNT(*) FROM events").fetchone()[0], count)
 
+    def test_csv_export_can_use_english_headers(self):
+        self.history.record(self.sample(self.now-60, 8))
+        path = Path(self.tmp.name)/"english.csv"
+        self.history.export(path, "BAT0", 24, language="en")
+        header = path.read_text(encoding="utf-8-sig").splitlines()[0]
+        self.assertIn("power_w_positive_discharge", header)
+        self.assertIn("battery", header)
+
 
 class PrivilegedControlTests(unittest.TestCase):
     def setUp(self):
@@ -390,6 +399,60 @@ class InstallerTests(unittest.TestCase):
         self.assertTrue(result["care"]["supported"])
         self.assertEqual(result["tlp"]["profile"], "balanced")
         self.assertEqual(result["tlp"]["config"]["TLP_AUTO_SWITCH"], "1")
+
+
+class PreferenceTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.state = Path(self.tmp.name)
+        self.context = patch.object(backend, "state_dir", return_value=self.state)
+        self.context.start()
+
+    def tearDown(self):
+        self.context.stop()
+        self.tmp.cleanup()
+
+    def test_old_preferences_migrate_without_losing_retention(self):
+        (self.state/"preferences.json").write_text('{"retention_days":90}')
+        self.assertEqual(backend.preferences(), {"retention_days":90,"language":"auto","display_mode":"full"})
+
+    def test_language_mode_and_retention_survive_separate_updates(self):
+        backend.save_preferences({"language":"en"})
+        backend.save_preferences({"display_mode":"icon"})
+        backend.save_preferences({"retention_days":7})
+        self.assertEqual(backend.preferences(), {"language":"en","display_mode":"icon","retention_days":7})
+        self.assertEqual((self.state/"preferences.json").stat().st_mode & 0o777, 0o600)
+
+    def test_all_bar_modes_are_valid(self):
+        for mode in backend.DISPLAY_MODES:
+            backend.save_preferences({"display_mode":mode})
+            self.assertEqual(backend.preferences()["display_mode"], mode)
+
+    def test_invalid_preferences_do_not_overwrite_saved_state(self):
+        backend.save_preferences({"language":"pt"})
+        before = (self.state/"preferences.json").read_text()
+        for invalid in ({"language":"unknown"}, {"display_mode":"shell"}, {"retention_days":0}, {"command":"id"}):
+            with self.assertRaises(ValueError):
+                backend.save_preferences(invalid)
+        self.assertEqual((self.state/"preferences.json").read_text(), before)
+
+    def test_corrupt_preference_file_uses_safe_defaults(self):
+        for value in ("invalid-json", "[]", '{"display_mode":"wrong","language":1}'):
+            (self.state/"preferences.json").write_text(value)
+            self.assertEqual(backend.preferences(), backend.PREFERENCE_DEFAULTS)
+
+    def test_automatic_language_respects_locale_priority(self):
+        with patch.dict(os.environ, {"LANG":"en_US.UTF-8","LC_MESSAGES":"pt_BR.UTF-8","LC_ALL":""}):
+            self.assertEqual(backend.effective_language({"language":"auto"}), "pt")
+            self.assertEqual(backend.effective_language({"language":"en"}), "en")
+        with patch.dict(os.environ, {"LANG":"pt_BR.UTF-8","LC_MESSAGES":"pt_BR.UTF-8","LC_ALL":"en_US.UTF-8"}):
+            self.assertEqual(backend.effective_language({"language":"auto"}), "en")
+
+    def test_operation_messages_are_bilingual(self):
+        message = "Proteção de carga aplicada e salva para reiniciar."
+        self.assertEqual(i18n.translate_message(message, "pt"), message)
+        self.assertEqual(i18n.translate_message(message, "en"), "Charge protection applied and saved for reboot.")
+        self.assertEqual(i18n.translate_message("Perfil aplicado: balanced.", "en"), "Profile applied: balanced.")
 
 
 if __name__ == "__main__":

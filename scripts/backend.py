@@ -13,6 +13,7 @@ import shutil
 import sqlite3
 import sys
 import time
+import tempfile
 
 from domain import (
     battery_dirs, limits_for, parse_care, parse_config, parse_tlp_status, read, run,
@@ -29,6 +30,8 @@ SERVICES = [
     "tlp.service", "tlp-pd.service", "power-profiles-daemon.service",
     "auto-cpufreq.service", "tuned.service", "tuned-ppd.service",
 ]
+DISPLAY_MODES = ("full", "percentage", "icon", "watts", "runtime", "percentage-runtime", "profile")
+PREFERENCE_DEFAULTS = {"retention_days": 30, "language": "auto", "display_mode": "full"}
 
 
 def state_dir():
@@ -38,7 +41,13 @@ def state_dir():
     return path
 
 
-def emit(value):
+def emit(value, language=None):
+    if isinstance(value, dict) and value.get("message"):
+        from i18n import translate_message
+        value = {**value, "message": translate_message(value["message"], language or effective_language(preferences()))}
+    if isinstance(value, dict) and value.get("history_error"):
+        from i18n import translate_message
+        value = {**value, "history_error": translate_message(value["history_error"], language or effective_language(preferences()))}
     print(json.dumps(value, ensure_ascii=False, allow_nan=False), flush=True)
 
 
@@ -116,13 +125,15 @@ class History:
                 "from": start, "to": end, "gap": group*3, "points": points, "events": events,
                 "average_w": summary[0], "peak_w": summary[1], "samples": summary[2]}
 
-    def export(self, path, battery, hours=24):
+    def export(self, path, battery, hours=24, language="pt"):
         since = time.time()-hours*3600
         with open(path, "x", newline="", encoding="utf-8-sig") as stream:
             writer = csv.writer(stream)
-            writer.writerow(["data_local", "timestamp_unix", "bateria", "carga_pct",
-                             "fluxo_w_positivo_descarga", "saude_pct", "energia_wh",
-                             "na_tomada", "estado"])
+            writer.writerow(
+                ["local_time", "unix_timestamp", "battery", "charge_pct", "power_w_positive_discharge",
+                 "health_pct", "energy_wh", "on_ac", "status"] if language == "en" else
+                ["data_local", "timestamp_unix", "bateria", "carga_pct",
+                 "fluxo_w_positivo_descarga", "saude_pct", "energia_wh", "na_tomada", "estado"])
             for r in self.db.execute(
                 "SELECT ts,battery,percent,power,health,energy,ac,status FROM samples "
                 "WHERE battery=? AND ts>=? ORDER BY ts", (battery, since)
@@ -265,14 +276,60 @@ def cached_diagnostics():
 
 
 def preferences():
+    result = dict(PREFERENCE_DEFAULTS)
     try:
         raw = json.loads((state_dir()/"preferences.json").read_text())
-        days = raw.get("retention_days")
-        if days in (7, 30, 90):
-            return {"retention_days": days}
+        if not isinstance(raw, dict):
+            return result
+        if raw.get("retention_days") in (7, 30, 90):
+            result["retention_days"] = raw["retention_days"]
+        if raw.get("language") in ("auto", "pt", "en"):
+            result["language"] = raw["language"]
+        if raw.get("display_mode") in DISPLAY_MODES:
+            result["display_mode"] = raw["display_mode"]
     except (OSError, ValueError, TypeError, AttributeError):
         pass
-    return {"retention_days": 30}
+    return result
+
+
+def system_language():
+    locale = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG", "en")
+    return "pt" if locale.lower().startswith("pt") else "en"
+
+
+def effective_language(settings):
+    language = settings.get("language", "auto")
+    return language if language in ("pt", "en") else system_language()
+
+
+def ui_preferences(settings):
+    return {**settings, "system_language": system_language()}
+
+
+def save_preferences(changes, current=None):
+    if not isinstance(changes, dict) or set(changes)-set(PREFERENCE_DEFAULTS):
+        raise ValueError("Preferências inválidas.")
+    settings = dict(current or preferences())
+    for key, value in changes.items():
+        if key == "retention_days" and value not in (7, 30, 90):
+            raise ValueError("Retenção inválida.")
+        if key == "language" and value not in ("auto", "pt", "en"):
+            raise ValueError("Idioma inválido.")
+        if key == "display_mode" and value not in DISPLAY_MODES:
+            raise ValueError("Formato da barra inválido.")
+        settings[key] = value
+    fd, name = tempfile.mkstemp(prefix=".preferences-", dir=state_dir())
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(settings, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(name, state_dir()/"preferences.json")
+    finally:
+        if os.path.exists(name):
+            os.unlink(name)
+    return settings
 
 
 def monitor():
@@ -300,6 +357,7 @@ def monitor():
             if now-last_emit >= (3 if visible else 15):
                 latest = enrich(snapshot(), diag)
                 latest["retention_days"] = settings["retention_days"]
+                latest["preferences"] = ui_preferences(settings)
                 latest["history_error"] = history_error
                 if history:
                     try:
@@ -309,7 +367,7 @@ def monitor():
                             last_trim = now
                     except sqlite3.Error as error:
                         latest["history_error"] = "Falha ao salvar o histórico: "+str(error)
-                emit(latest)
+                emit(latest, effective_language(settings))
                 last_emit = now
             events = selected.select(timeout=0.5)
             if not events:
@@ -339,16 +397,16 @@ def monitor():
                         if hours not in (1, 6, 24, 168, 720, 2160) or not isinstance(battery, str):
                             raise ValueError("Filtro de histórico inválido.")
                         emit(history.query(battery, hours))
-                    elif op == "retention":
-                        days = request.get("days")
-                        if days not in (7, 30, 90):
-                            raise ValueError("Retenção inválida.")
-                        settings = {"retention_days": days}
-                        (state_dir()/"preferences.json").write_text(json.dumps(settings))
+                    elif op in ("retention", "preferences"):
+                        changes = {"retention_days": request.get("days")} if op == "retention" else request.get("changes")
+                        settings = save_preferences(changes, settings)
                         if history:
-                            history.trim(days)
+                            history.trim(settings["retention_days"])
                         last_emit = 0
-                        emit({"type": "result", "ok": True, "message": "Retenção do histórico salva."})
+                        emit({"type": "preferences", "preferences": ui_preferences(settings)})
+                        if "retention_days" in changes:
+                            emit({"type": "result", "ok": True, "message": "Retenção do histórico salva."},
+                                 effective_language(settings))
                     else:
                         raise ValueError("Solicitação desconhecida.")
                 except Exception as error:
@@ -359,12 +417,15 @@ def monitor():
             history.close()
 
 
-def report():
+def report(language=None):
+    language = language or effective_language(preferences())
     data = enrich(snapshot(), cached_diagnostics())
-    target = unique_download("Battery-Studio-diagnostico", ".txt")
-    text = "BATTERY STUDIO 1.0.0 · DIAGNÓSTICO\n"+time.strftime("%Y-%m-%d %H:%M:%S %Z")+"\n\n"
-    text += "Potência: fluxo da bateria; não é o consumo total da tomada.\n"
-    text += "Não inclui número de série nem uma lista de dispositivos de rede.\n\n"
+    target = unique_download("Battery-Studio-report" if language == "en" else "Battery-Studio-diagnostico", ".txt")
+    text = "BATTERY STUDIO 1.1.0 · DIAGNOSTICS / DIAGNÓSTICO\n"+time.strftime("%Y-%m-%d %H:%M:%S %Z")+"\n\n"
+    text += ("Power: battery flow, not total wall power.\nNo serial numbers or network device list.\n\n"
+             if language == "en" else
+             "Potência: fluxo da bateria; não é o consumo total da tomada.\n"
+             "Não inclui número de série nem uma lista de dispositivos de rede.\n\n")
     text += json.dumps(data, ensure_ascii=False, indent=2)
     with open(target, "x", encoding="utf-8") as stream:
         stream.write(text)
@@ -377,33 +438,39 @@ def main():
     parser.add_argument("command", choices=("monitor", "snapshot", "action", "export", "report"))
     parser.add_argument("parameters", nargs="?", default="{}")
     args = parser.parse_args()
+    requested_language = None
     try:
         if args.command == "monitor":
             monitor()
             return 0
+        parameters = json.loads(args.parameters)
+        if isinstance(parameters, dict) and parameters.get("language") in ("pt", "en"):
+            requested_language = parameters["language"]
         if args.command == "snapshot":
             result = enrich(snapshot(), cached_diagnostics())
+            result["preferences"] = ui_preferences(preferences())
         elif args.command == "action":
             if len(args.parameters) > 16384:
                 raise ValueError("Solicitação grande demais.")
-            result = action(json.loads(args.parameters))
+            result = action(parameters)
         elif args.command == "report":
-            result = report()
+            result = report(requested_language)
         else:
-            req = json.loads(args.parameters)
+            req = parameters
             if req.get("hours", 24) not in (1, 6, 24, 168, 720, 2160) or not isinstance(req.get("battery"), str):
                 raise ValueError("Filtro de exportação inválido.")
             history = History()
             try:
-                path = history.export(unique_download("Battery-Studio-historico", ".csv"),
-                                      req["battery"], req.get("hours", 24))
+                language = requested_language or effective_language(preferences())
+                path = history.export(unique_download("Battery-Studio-history" if language == "en" else "Battery-Studio-historico", ".csv"),
+                                      req["battery"], req.get("hours", 24), language)
             finally:
                 history.close()
             result = {"ok": True, "message": "CSV salvo em "+path, "path": path}
-        emit(result)
+        emit(result, requested_language)
         return 0 if result.get("ok", True) else 1
     except Exception as error:
-        emit({"ok": False, "message": str(error)})
+        emit({"ok": False, "message": str(error)}, requested_language)
         return 1
 
 

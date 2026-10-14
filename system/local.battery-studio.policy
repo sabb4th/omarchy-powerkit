@@ -3,8 +3,12 @@
 <policyconfig>
   <vendor>Battery Studio</vendor>
   <action id="local.battery-studio.control">
-    <description>Alterar configurações de bateria e TLP</description>
-    <message>Autentique-se para aplicar o ajuste do Battery Studio.</message>
+    <description>Change battery and TLP settings</description>
+    <description xml:lang="pt_BR">Alterar configurações de bateria e TLP</description>
+    <description xml:lang="pt">Alterar configurações de bateria e TLP</description>
+    <message>Authenticate to apply the Battery Studio setting.</message>
+    <message xml:lang="pt_BR">Autentique-se para aplicar o ajuste do Battery Studio.</message>
+    <message xml:lang="pt">Autentique-se para aplicar o ajuste do Battery Studio.</message>
     <defaults>
       <allow_any>no</allow_any>
       <allow_inactive>no</allow_inactive>

@@ -1,6 +1,9 @@
 import QtQuick
+import qs.Commons as Commons
 import qs.Ui as Ui
 import "." as Local
+import "I18n.js" as Locale
+import "Display.js" as Display
 
 Ui.BarWidget {
     id: root
@@ -8,13 +11,23 @@ Ui.BarWidget {
     readonly property bool opened: panelLoader.item ? panelLoader.item.opened : false
     readonly property bool popoutSwitchClosing: panelLoader.item ? panelLoader.item.popoutSwitchClosing : false
     readonly property var battery: Local.BatteryModel.sample.aggregate
+    readonly property string language: Local.BatteryModel.language
+    readonly property string mode: Local.BatteryModel.displayMode
+    readonly property string label: Display.barText(mode, battery,
+        (Local.BatteryModel.sample.tlp || {}).profile, language)
     readonly property string stateLabel: battery ? (
-        battery.status === "Charging" ? "Carregando" :
-        battery.status === "Discharging" ? "Na bateria" : "Carga em espera"
-    ) : "Sem bateria"
+        battery.status === "Charging" ? tr("Carregando") :
+        battery.status === "Discharging" ? tr("Na bateria") : tr("Carga em espera")
+    ) : tr("Sem bateria")
+    readonly property var modeLabels: [
+        tr("Ícone + porcentagem + watts"), tr("Ícone + porcentagem"), tr("Somente ícone"),
+        tr("Ícone + watts"), tr("Ícone + autonomia"), tr("Ícone + porcentagem + autonomia"),
+        tr("Ícone + porcentagem + perfil")
+    ]
     implicitWidth: button.implicitWidth
     implicitHeight: button.implicitHeight
 
+    function tr(text) { return Locale.tr(text, language) }
     function open() { if (panelLoader.item) panelLoader.item.open() }
     function close() { if (panelLoader.item) panelLoader.item.close() }
     function toggle() { if (panelLoader.item) panelLoader.item.toggle() }
@@ -43,24 +56,43 @@ Ui.BarWidget {
         anchors.fill: parent
         bar: root.bar
         active: root.opened
-        text: {
-            var b = root.battery
-            var icon = !b ? "󰂑" : b.status === "Charging" ? "󰂄" :
-                b.percent !== null && b.percent < 20 ? "󰁺" : "󰁹"
-            if (root.vertical) return icon
-            var label = icon
-            if (root.setting("showPercentage", true))
-                label += b && b.percent !== null ? " " + Math.round(b.percent) + "%" : " —"
-            if (root.setting("showWatts", true) && b && b.power_w !== null)
-                label += " · " + b.power_w.toFixed(1) + " W"
-            return label
-        }
+        labelVisible: false
+        hasVisualContent: true
+        fixedWidth: root.vertical ? root.barSize : Math.max(Commons.Style.space(30),
+                    parts.implicitWidth + Commons.Style.space(14))
+        text: root.label
         tooltipText: "Battery Studio · " + root.stateLabel +
-                     (Local.BatteryModel.stale ? "\nAguardando atualização" : "") +
-                     "\nClique para abrir o painel TLP"
+                     (Local.BatteryModel.stale ? "\n" + root.tr("Aguardando atualização") : "") +
+                     "\n" + root.tr("Formato: ") + root.modeLabels[Display.modes.indexOf(root.mode)] +
+                     "\n" + root.tr("Botão direito: próximo formato")
+        Row {
+            id: parts
+            anchors.centerIn: parent
+            spacing: Commons.Style.space(6)
+            Local.BatteryGlyph {
+                width: Commons.Style.space(21)
+                height: button.fontSize * 1.05
+                anchors.verticalCenter: parent.verticalCenter
+                percent: root.battery ? root.battery.percent : null
+                charging: !!root.battery && root.battery.status === "Charging"
+                foreground: button.foreground
+                urgent: Commons.Color.urgent
+                background: Commons.Color.background
+            }
+            Text {
+                visible: !root.vertical && root.label !== ""
+                text: root.label
+                anchors.verticalCenter: parent.verticalCenter
+                color: button.foreground
+                font.family: button.fontFamily
+                font.pixelSize: button.fontSize
+                textFormat: Text.PlainText
+            }
+        }
         onPressed: function(code) {
             if (code === Qt.LeftButton) root.toggle()
-            else if (code === Qt.RightButton) Local.BatteryModel.refresh()
+            else if (code === Qt.RightButton) Local.BatteryModel.cycleDisplay()
+            else if (code === Qt.MiddleButton) Local.BatteryModel.refresh()
         }
     }
 }

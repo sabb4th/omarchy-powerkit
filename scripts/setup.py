@@ -164,6 +164,9 @@ def check(qml):
     else:
         print("Validador Omarchy não disponível neste ambiente.", flush=True)
     invoke([sys.executable, "-B", "-m", "unittest", "discover", "-s", ROOT/"tests", "-v"])
+    node = shutil.which("node")
+    if node and (ROOT/"tests/test_display.js").exists():
+        invoke([node, ROOT/"tests/test_display.js"])
     if qml:
         tool = shutil.which("qmllint")
         if not tool:

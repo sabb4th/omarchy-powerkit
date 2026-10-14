@@ -1,19 +1,22 @@
-# Validação · Battery Studio 1.0.0
+# Validação · Battery Studio 1.1.0
 
 ## Executado
 
 | Verificação | Resultado |
 |---|---|
-| 34 testes Python com sysfs/TLP simulados | Passaram |
+| 42 testes Python com sysfs/TLP simulados | Passaram |
 | Validador oficial omarchy-plugin-validate, obtido do código do Omarchy | Passou |
 | Compilação dos fontes Python | Passou |
 | Sintaxe dos três scripts Bash | Passou |
 | XML da política polkit | Válido |
 | Coletor real sem hardware de bateria | Fluxo JSON, consulta de histórico, retenção, erro de entrada e encerramento passaram |
-| Dashboard QML em Qt 6.12 | 16 renderizações sem erros de QML |
+| Dashboard QML em Qt 6.12 | 64 renderizações sem erros de QML; português e inglês |
+| Apresentação JavaScript | Sete modos, onze níveis, unidades e traduções passaram |
+| Preferências | Migração da versão anterior, cliques rápidos, idioma, formato e retenção persistidos |
+| Card TLP e sistema | Preservado, alterando somente os textos por tradução |
 | Paletas | Escura, clara e verde |
 | Geometria | Largura normal e largura reduzida com fonte ampliada |
-| Adaptadores QML de barra/painel com interfaces simuladas do Omarchy/Quickshell | Abrir, fechar, alternar e fechar para troca de painel passaram |
+| Adaptadores QML de barra/painel com interfaces simuladas do Omarchy/Quickshell | Abrir, fechar, trocar painel, alternar os sete formatos com botão direito e mudar idioma passaram |
 | qmllint com as interfaces simuladas | Código de saída 0; avisos sobre propriedades dinâmicas do Loader e dos objetos do host |
 
 Os testes verificam unidades de energia/corrente/tensão, autonomia até o limite,
@@ -48,3 +51,9 @@ na sessão Omarchy.
 
 Essas etapas conferem a integração no hardware; as prévias do pacote usam
 dados simulados e não são evidência de autonomia ou consumo do notebook.
+
+## English summary
+
+42 Python tests passed. Native Qt layouts were rendered 64 times across both languages, three palettes and a smaller screen/font configuration. Bar-mode cycles, language changes, data flow and persistence passed. The TLP/system card was preserved.
+
+Omarchy/Quickshell-specific interfaces were simulated in adapter tests. Firmware, real TLP commands and authentication must still be verified on the target notebook. These results do not claim a real-device test.

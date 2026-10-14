@@ -31,14 +31,15 @@ Ui.Panel {
         bar: root.bar
         open: root.opened
         focusTarget: keys
-        contentWidth: fittedContentWidth(Commons.Style.space(640))
-        contentHeight: fittedContentHeight(Commons.Style.space(660))
+        contentWidth: fittedContentWidth(Commons.Style.space(500))
+        contentHeight: fittedContentHeight(Math.min(Commons.Style.space(560), Math.max(Commons.Style.space(260), dashboard.desiredHeight)))
         Ui.PanelKeyCatcher {
             id: keys
             anchors.fill: parent
             onCloseRequested: root.close()
             onTabRequested: function(direction) { root.switchPanel(direction) }
             Local.Dashboard {
+                id: dashboard
                 anchors.fill: parent
                 backend: Local.BatteryModel
                 foreground: Commons.Color.popups.text
