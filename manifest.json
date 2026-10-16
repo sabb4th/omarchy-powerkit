@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "id": "local.battery-studio",
-  "name": "Battery Studio",
-  "version": "2.1.0",
+  "id": "io.github.sabb4th.powerkit",
+  "name": "PowerKit",
+  "version": "3.0.0",
   "author": "Ângela Sabát",
   "license": "MIT",
-  "description": "Battery care with batctl and power-profiles-daemon. Rust backend, native power panel and hardware charge behaviour controls.",
+  "description": "Battery care, charging controls and power profiles for the Omarchy bar. Rust, batctl and power-profiles-daemon.",
   "kinds": [
     "bar-widget"
   ],
@@ -13,7 +13,7 @@
     "barWidget": "BarWidget.qml"
   },
   "barWidget": {
-    "displayName": "Battery Studio",
+    "displayName": "PowerKit",
     "category": "Power",
     "allowMultiple": false,
     "defaultSection": "right"

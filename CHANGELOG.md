@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.0 · PowerKit
+
+- Renamed the project/repository to PowerKit / omarchy-powerkit and adopted io.github.sabb4th.powerkit as the permanent marketplace ID.
+- Moved the solid charging bolt to the left of the battery while preserving the battery fill.
+- Added a source launcher for native Omarchy install/update, cached Rust builds, checksummed release packages and CI/release workflows.
+- Added explicit, backed-up migration from local.battery-studio and fallback reading of legacy display preferences.
+- Added root preview, security documentation and marketplace submission metadata.
+
 ## 2.1.0
 
 - Added hardware-advertised Auto, Inhibit charge and Force discharge controls for the selected battery.

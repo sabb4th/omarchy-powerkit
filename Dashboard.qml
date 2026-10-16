@@ -129,7 +129,7 @@ Item {
                 Layout.fillWidth: true
                 spacing: root.u(14)
                 BatteryGlyph {
-                    Layout.preferredWidth: root.u(36)
+                    Layout.preferredWidth: root.u(36) + (charging ? root.u(18) * 0.75 : 0)
                     Layout.preferredHeight: root.u(18)
                     percent: root.known(root.b.percent) ? root.b.percent : null
                     charging: root.b.status === "Charging"

@@ -5,7 +5,7 @@ import "." as Local
 
 Ui.Panel {
     id: root
-    moduleName: "local.battery-studio"
+    moduleName: "io.github.sabb4th.powerkit"
     manageIpc: false
     property var anchorItem: null
     property var hostWidget: null

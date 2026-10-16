@@ -6,7 +6,7 @@ import "Display.js" as Display
 
 Ui.BarWidget {
     id: root
-    moduleName: "local.battery-studio"
+    moduleName: "io.github.sabb4th.powerkit"
     readonly property bool opened: panelLoader.item ? panelLoader.item.opened : false
     readonly property bool popoutSwitchClosing: panelLoader.item ? panelLoader.item.popoutSwitchClosing : false
     readonly property var battery: Local.BatteryModel.sample.aggregate
@@ -58,7 +58,7 @@ Ui.BarWidget {
         fixedWidth: root.vertical ? root.barSize : Math.max(Commons.Style.space(30),
                     parts.implicitWidth + Commons.Style.space(14))
         text: root.label
-        tooltipText: "Battery Studio · " + root.stateLabel +
+        tooltipText: "PowerKit · " + root.stateLabel +
                      (Local.BatteryModel.stale ? "\n" + "Waiting for an update" : "") +
                      "\n" + "Display: " + root.modeLabels[Display.modes.indexOf(root.mode)] +
                      "\n" + "Right-click: next display mode"
@@ -67,7 +67,7 @@ Ui.BarWidget {
             anchors.centerIn: parent
             spacing: Commons.Style.space(6)
             Local.BatteryGlyph {
-                width: Commons.Style.space(21)
+                width: Commons.Style.space(21) + (charging ? height * 0.75 : 0)
                 height: button.fontSize * 1.05
                 anchors.verticalCenter: parent.verticalCenter
                 percent: root.battery ? root.battery.percent : null

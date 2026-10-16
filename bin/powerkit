@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Source installations (including `omarchy plugin add`) build once into user cache.
+set -euo pipefail
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+digest=$(sha256sum "$root/Cargo.toml" "$root/Cargo.lock" "$root/src/main.rs" | sha256sum)
+cache_base=${XDG_CACHE_HOME:-$HOME/.cache}
+build_dir=$cache_base/omarchy-powerkit/builds/${digest%% *}
+binary=$build_dir/release/powerkit
+if [[ ! -x $binary ]]; then
+  command -v cargo >/dev/null || {
+    echo 'PowerKit: install Rust/Cargo (omarchy pkg add rust), or use the prebuilt release. See README.md.' >&2
+    exit 127
+  }
+  printf 'PowerKit: compiling the Rust backend into the user cache…\n' >&2
+  cargo build --quiet --release --locked --manifest-path "$root/Cargo.toml" --target-dir "$build_dir"
+fi
+exec "$binary" "$@"

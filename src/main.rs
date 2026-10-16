@@ -295,7 +295,7 @@ fn prefs_path() -> PathBuf {
         .unwrap_or_else(|| {
             PathBuf::from(env::var_os("HOME").unwrap_or_default()).join(".local/state")
         });
-    base.join("omarchy-battery-studio/preferences.json")
+    base.join("omarchy-powerkit/preferences.json")
 }
 fn valid_preference(key: &str, value: &Value) -> bool {
     match key {
@@ -305,7 +305,17 @@ fn valid_preference(key: &str, value: &Value) -> bool {
 }
 fn load_prefs() -> Value {
     let mut prefs = json!({"display_mode":"full"});
-    if let Ok(Value::Object(saved)) = serde_json::from_str::<Value>(&read(prefs_path())) {
+    let path = prefs_path();
+    let source = if path.exists() {
+        path
+    } else {
+        path.parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("omarchy-battery-studio/preferences.json")
+    };
+    if let Ok(Value::Object(saved)) = serde_json::from_str::<Value>(&read(source)) {
         for (k, v) in saved {
             if valid_preference(&k, &v) {
                 prefs[k] = v;
@@ -496,9 +506,7 @@ fn main() {
             }
         }
         _ => {
-            eprintln!(
-                "Usage: battery-studio monitor | sample | action '{{\"op\":...,\"args\":[...]}}'"
-            );
+            eprintln!("Usage: powerkit monitor | sample | action '{{\"op\":...,\"args\":[...]}}'");
             std::process::exit(2);
         }
     }
@@ -566,7 +574,7 @@ mod tests {
     }
     #[test]
     fn reads_sysfs_charge_units_and_missing_metrics() {
-        let dir = env::temp_dir().join(format!("battery-studio-test-{}", std::process::id()));
+        let dir = env::temp_dir().join(format!("powerkit-test-{}", std::process::id()));
         let battery_dir = dir.join("BAT0");
         fs::create_dir_all(&battery_dir).unwrap();
         for (name, value) in [
@@ -613,10 +621,7 @@ mod tests {
     }
     #[test]
     fn validates_battery_and_mode_before_privileged_writes() {
-        let dir = env::temp_dir().join(format!(
-            "battery-studio-behaviour-test-{}",
-            std::process::id()
-        ));
+        let dir = env::temp_dir().join(format!("powerkit-behaviour-test-{}", std::process::id()));
         let battery_dir = dir.join("BAT0");
         fs::create_dir_all(&battery_dir).unwrap();
         fs::write(battery_dir.join("type"), "Battery").unwrap();

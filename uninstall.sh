@@ -2,9 +2,9 @@
 set -euo pipefail
 [[ $EUID != 0 ]] || { echo 'Run as your normal user.' >&2; exit 1; }
 [[ $# == 0 ]] || { echo 'Usage: bash uninstall.sh' >&2; exit 2; }
-plugin_id=local.battery-studio
+plugin_id=io.github.sabb4th.powerkit
 target=${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/$plugin_id
-state=${XDG_STATE_HOME:-$HOME/.local/state}/omarchy-battery-studio
+state=${XDG_STATE_HOME:-$HOME/.local/state}/omarchy-powerkit
 [[ ! -L $target ]] || { echo "Symlink destination: $target" >&2; exit 1; }
 omarchy plugin disable "$plugin_id"
 if [[ -d $target ]]; then

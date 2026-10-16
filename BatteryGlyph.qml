@@ -11,13 +11,15 @@ Item {
     property bool alert: true
     readonly property int level: Display.level(percent)
     readonly property color fillColor: alert && level >= 0 && level <= 2 ? urgent : foreground
-    implicitWidth: 22
+    readonly property real batteryLeft: charging ? height * 0.75 : 0
+    readonly property real batteryWidth: Math.max(0, width - batteryLeft)
+    implicitWidth: 22 + batteryLeft
     implicitHeight: 14
     Rectangle {
         id: body
-        x: 0
+        x: glyph.batteryLeft
         y: glyph.height * 0.13
-        width: glyph.width * 0.88
+        width: glyph.batteryWidth * 0.88
         height: glyph.height * 0.74
         radius: Math.max(1, glyph.height * 0.1)
         color: "transparent"
@@ -34,9 +36,9 @@ Item {
         }
     }
     Rectangle {
-        x: glyph.width * 0.91
+        x: glyph.batteryLeft + glyph.batteryWidth * 0.91
         y: glyph.height * 0.36
-        width: glyph.width * 0.09
+        width: glyph.batteryWidth * 0.09
         height: glyph.height * 0.28
         radius: 1
         color: glyph.foreground
@@ -50,27 +52,30 @@ Item {
     }
     Canvas {
         id: bolt
-        anchors.fill: body
+        x: 0
+        y: glyph.height * 0.1
+        width: glyph.height * 0.5
+        height: glyph.height * 0.8
         visible: glyph.charging
         onPaint: {
             var ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)
-            ctx.fillStyle = glyph.background
+            ctx.fillStyle = glyph.foreground
             ctx.strokeStyle = glyph.foreground
             ctx.lineWidth = Math.max(1, height * 0.08)
             ctx.lineJoin = "round"
             ctx.beginPath()
-            ctx.moveTo(width * 0.55, height * 0.07)
-            ctx.lineTo(width * 0.32, height * 0.55)
-            ctx.lineTo(width * 0.49, height * 0.55)
-            ctx.lineTo(width * 0.42, height * 0.94)
-            ctx.lineTo(width * 0.71, height * 0.41)
-            ctx.lineTo(width * 0.54, height * 0.41)
+            ctx.moveTo(width * 0.64, 0)
+            ctx.lineTo(width * 0.06, height * 0.56)
+            ctx.lineTo(width * 0.44, height * 0.56)
+            ctx.lineTo(width * 0.29, height)
+            ctx.lineTo(width * 0.96, height * 0.39)
+            ctx.lineTo(width * 0.57, height * 0.39)
             ctx.closePath()
-            ctx.stroke()
             ctx.fill()
         }
     }
+    onChargingChanged: bolt.requestPaint()
     onForegroundChanged: bolt.requestPaint()
     onBackgroundChanged: bolt.requestPaint()
     onWidthChanged: bolt.requestPaint()

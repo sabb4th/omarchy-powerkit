@@ -1,34 +1,39 @@
-# Validation · Battery Studio 2.1
+# Validation · PowerKit 3.0.0
 
-Validated on 2026-10-15 on a ThinkPad running Omarchy, batctl and power-profiles-daemon.
+Validated on 2026-10-15 with Omarchy Quattro and a ThinkPad battery backend.
 
-- `cargo test --locked`: eight tests passed. Covers threshold capabilities, discrete values, rejected arguments, missing thresholds, weighted multi-battery aggregation, sysfs unit conversion, display preferences, charge-behaviour parsing and battery/mode validation before privileged writes.
-- Behaviour validation tests cover all three advertised modes, unsupported modes, malformed input, path traversal, absent batteries and non-battery power supplies. These tests use temporary fixtures and never invoke pkexec.
-- `cargo clippy --locked --all-targets -- -D warnings`, `cargo fmt --check`, script syntax and `omarchy-plugin-validate`: passed.
-- JavaScript presentation tests using Deno: seven bar formats, eleven battery levels, power and runtime formatting passed.
-- `cargo build --release --locked`: optimized binary built successfully.
-- Real `battery-studio sample`: detected ThinkPad BAT0, 20–80% thresholds, boot/resume persistence, the current daemon profile, three available profiles and kernel-advertised `auto`, `inhibit-charge`, `force-discharge` with `auto` active. Voltage was read; missing temperature remained null.
-- Isolated Quickshell preview with simulated data: compact and expanded layouts loaded without QML errors. The default panel and expanded limit controls were visually inspected. `previews/power-panel-v2.png` is a capture of the current panel using simulated readings.
-- Monitor protocol using a temporary XDG state directory: JSON lines, stdin EOF termination, display-format persistence, ignored legacy language changes and 0600 preference-file permissions passed.
+## Completed checks
 
-The bar battery artwork is unchanged. Display formatting is English-only, and the bar keeps its seven display modes and mouse shortcuts. Settings and the language selector have been removed.
+- Eight Rust tests: threshold capabilities/discrete values, malformed actions, missing thresholds, weighted multi-battery aggregation, sysfs unit conversion, display preferences, advertised charge behaviours, and battery/mode/path validation before privileged writes.
+- `cargo clippy --locked --all-targets -- -D warnings`, `cargo fmt --check`, shell syntax and JavaScript presentation tests for seven display modes and eleven battery levels passed.
+- Both the installed Omarchy validator and the official validator at revision `246f33a2fef66411c990860d88e0823ae83987fc` accepted the root manifest/layout.
+- Two isolated distribution tests passed: native source-launcher caching/source-change rebuild and explicitly requested migration preserving bar position/custom settings, with configuration/plugin backups and archive-based removal. Migration integration requires `/usr/bin/batctl` and is skipped on CI hosts without that documented runtime dependency.
+- The real source launcher compiled locked Rust dependencies in a temporary XDG cache, forwarded a request to the Rust binary, then reused the binary on a second invocation. No privileged operation was performed.
+- A temporary legacy state directory was read successfully; subsequent preference writes used the new PowerKit directory and left legacy preferences untouched.
+- Optimized release compilation and checksummed packaging passed. The archive includes the executable, sources, original source launcher, manifest, UI, documentation and license; build caches and Python bytecode are excluded.
+- Quickshell's real offscreen runtime loaded the compact/expanded panel without QML errors. The final solid charging bolt sits to the left of the battery. The root `preview.png` is a capture with simulated readings, not private system data.
+- Prior read-only hardware verification detected ThinkPad BAT0, 20–80% thresholds, boot/resume persistence, the current daemon profile, three profiles and all three charge behaviours. No real battery settings were changed for testing.
 
-## Scope and limitations
+## Limits
 
-No real battery mode, charge threshold, daemon profile or persistence service was changed for testing. Authenticated writes, boot/resume behaviour and other manufacturers still need validation on the corresponding hardware. The updated installer is tested in a temporary configuration with shell commands mocked; it has not been applied to the actual desktop during development.
+Authenticated writes and boot/resume behaviour still require hardware testing. The plugin delegates threshold/vendor handling to batctl and rejects unsupported behaviour modes before asking for authentication. Other laptop models are not claimed to have been tested.
 
-The current batctl CLI has no charge-behaviour setter. The plugin uses the same standard kernel attribute as batctl's ThinkPad backend, through fixed `/usr/bin/pkexec` and `/usr/bin/tee` executables, with a power-supply entry checked against the actual sysfs directory and an allowlisted advertised mode passed on stdin. The kernel readback is verified after the write. Mode changes are not persisted by the plugin.
+The current batctl CLI has no charge-behaviour setter. PowerKit uses batctl's standard kernel attribute through fixed pkexec/tee executables, a validated real power-supply entry and an allowlisted advertised mode passed over stdin. Kernel readback is checked after writing. Behaviour is not persisted by PowerKit; threshold persistence is opt-in.
 
-batctl still owns threshold validation, vendor adaptation and threshold persistence. Its `detect` and `status` text formats are parsed because the CLI has no JSON output. Unknown capabilities disable the corresponding controls.
+Monitoring has no network/telemetry. A first source build can download locked dependencies from the user's configured Cargo registry. The runtime thereafter uses local files/tools only. `SECURITY.md` documents privilege boundaries and persistent files.
 
-Standalone `qmllint` does not automatically resolve Quickshell's virtual `qs.*` imports; the real Quickshell runtime with installed Omarchy components was used for interface validation. Offscreen runtime notices about Wayland and window masks are platform limitations of the preview.
+The native installer clones source without running `install.sh`; the tracked source launcher makes that flow work. The optional `--migrate` installer is the only path that rewrites the old widget ID in backed-up shell configuration. The actual desktop installation was not modified by the distribution tests.
 
-## Repeat
+Standalone `qmllint` cannot automatically resolve Quickshell's virtual `qs.*` imports; UI verification used the real Quickshell runtime. Offscreen notices about Wayland and window masks come from the preview platform.
+
+## Reproduce
 
 ```bash
 bash check.sh
+omarchy plugin validate .
 cargo build --release --locked
-./target/release/battery-studio sample
+bash scripts/package.sh
+./target/release/powerkit sample
 ```
 
-The compiler used for this session lives under `/tmp`; no permanent system Rust installation was made. Development checks accept Node.js or Deno.
+Local compilation used a temporary Rust toolchain under `/tmp`; no permanent system compiler installation was made. Marketplace approval is a separate maintainer decision after automated submission checks.

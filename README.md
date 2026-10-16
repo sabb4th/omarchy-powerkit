@@ -1,55 +1,79 @@
-# Battery Studio · Omarchy
+# PowerKit
 
-A native-looking battery panel for the Omarchy Quickshell desktop, with a **Rust backend**, [batctl](https://github.com/Ooooze/batctl) charge thresholds and power-profiles-daemon profiles. The interface is entirely in English.
+Battery care and power profiles for the **Omarchy Quattro** bar. PowerKit combines a Rust backend, a native QML panel, [batctl](https://github.com/Ooooze/batctl) charge limits and power-profiles-daemon profiles.
 
-The bar keeps its battery artwork, charging indicator, seven display formats and mouse shortcuts: **left-click** opens the panel, **right-click** changes the display format, and **middle-click** refreshes. Appearance is configured only from the bar; there is no Settings section.
-
-![Compact power panel with simulated readings](previews/power-panel-v2.png)
-
-## Panel
-
-Inspired by [Omarchy's power panel](https://github.com/omacom/omarchy/tree/246f33a2fef66411c990860d88e0823ae83987fc/shell/plugins/panels/power): large percentage, charge gauge with a limit marker, compact two-column statistics and horizontal profile buttons.
-
-- **Battery:** health, cycles, current full capacity, design capacity, estimated runtime or time to the charge limit, and charging/discharging power. Temperature and voltage appear when temperature telemetry exists. Missing readings display `—`.
-- **Power profile:** the profiles actually advertised by the daemon. Uses the stock `omarchy-powerprofiles-set` bridge to remember the current source's profile.
-- **Charge behaviour:** **Auto**, **Inhibit charge** and **Force discharge**, restricted to modes advertised by the selected battery's kernel driver. The current mode is highlighted, with a short explanation of its effect.
-- **Charge limits:** expand to show four batctl presets, custom start/stop limits, boot/resume persistence and saved-limit restoration. These controls stay collapsed by default.
-
-**Charge behaviour applies to the selected battery. Thresholds apply to all batteries through batctl.** Auto follows the hardware's normal charging policy and thresholds. Inhibit charge pauses charging; AC power routing depends on hardware. Force discharge uses the battery even on AC power; switch back to Auto to stop it. Behaviour changes are live and are not saved or replayed by the plugin. Persistence covers charge thresholds only.
-
-The installed batctl CLI can read charge behaviour but has no setter. The plugin therefore writes the same standard `charge_behaviour` sysfs attribute used by batctl's backend, using `/usr/bin/pkexec /usr/bin/tee` with a validated power-supply entry and allowlisted mode passed over stdin. No shell or custom privileged helper is used. Only modes advertised by the real kernel attribute can be selected.
+![PowerKit panel with simulated battery readings](preview.png)
 
 ## Install
 
-Requires Omarchy's Quickshell plugin API, Rust/Cargo for compilation, Ooooze's `batctl-tui` (`/usr/bin/batctl`), configured power-profiles-daemon, `jq`, `/usr/bin/tee`, polkit and a graphical authentication agent. Development checks also need Rust's `clippy` and `rustfmt` components and Node.js or Deno.
+Requires Omarchy Quattro's Quickshell plugin API, a configured `power-profiles-daemon`, Ooooze's **`batctl-tui`** (`/usr/bin/batctl`), Rust/Cargo for source installations, `jq`, coreutils and a running graphical polkit agent. The unrelated mesh-networking tool also named batctl is not supported. No packages or services are installed or enabled automatically.
 
 ```bash
-bash check.sh
-bash install.sh
-# Alternatively, install an already-built binary:
-bash install.sh --prebuilt target/release/battery-studio
+omarchy plugin add https://github.com/sabb4th/omarchy-powerkit.git --enable
 ```
 
-The installer does not install packages or change power-management services. It installs runtime files under `~/.config/omarchy/plugins/local.battery-studio`, archives the previous version under the XDG state directory and preserves an enabled widget's position. The plugin ID and display-format preference remain unchanged; old language preferences are ignored.
+The marketplace/native installer clones this repository. `bin/powerkit` builds the backend on first use using the locked Cargo dependencies, then runs the cached executable. Compilation may take a little while and needs access to your configured Cargo registry; it never runs as root. Later source changes create a new build cache. There is no background downloader or external binary service.
 
-Charge actions use system authentication. When persistence is active, changing thresholds also saves their new values using `batctl persist enable`. If this second step fails, the panel reports that live limits were applied but saving failed.
+If Cargo is missing, install Rust using your normal package-management flow (on Omarchy, `omarchy pkg add rust`). For a build-free installation, download the Linux x86_64 archive and matching checksum from [Releases](https://github.com/sabb4th/omarchy-powerkit/releases), verify and unpack them, then run `bash install.sh --prebuilt bin/powerkit` inside the extracted directory. The archive's `bin/powerkit` is the compiled executable, not the source launcher.
+
+## Use
+
+- **Left-click:** open or close the panel. **Escape:** close it.
+- **Right-click:** cycle seven bar formats. **Middle-click:** refresh.
+- **Profiles:** Saver → Balanced → Performance, limited to profiles actually offered by the daemon. Uses Omarchy's standard source-aware bridge to remember the AC/battery choice.
+- **Charge behaviour:** Auto, Inhibit charge and Force discharge, restricted to the selected battery's advertised modes. A short description explains the current mode.
+- **Charge limits:** expand for four hardware-adapted batctl presets, custom start/stop limits, boot/resume persistence and saved-limit restoration.
+
+The panel shows health, charge cycles, full/design capacity, power and estimated runtime or time to the charge limit. Temperature and voltage appear when temperature telemetry exists. Missing values display `—`. The interface is English; the appearance follows your Omarchy theme.
+
+**Charge behaviour applies to the selected battery. Thresholds apply to all batteries through batctl.** Auto follows normal charging policy and limits. Inhibit charge pauses charging; power routing depends on hardware. Force discharge uses the battery even on AC power: select Auto to stop it. Behaviour is not saved or replayed by PowerKit. The persistence switch saves **thresholds only**. When persistent thresholds change, PowerKit updates the saved values too; a failed save is reported separately from live application.
+
+The charging indicator is a solid lightning bolt to the **left** of the battery. The battery fill remains solid, without a grey charging overlay.
+
+## Permissions and dependencies
+
+Read-only monitoring requires no authentication. Charge changes request standard system authentication through polkit. Thresholds/persistence use `pkexec /usr/bin/batctl`; behaviour uses the same kernel `charge_behaviour` interface as batctl's backend through a validated `pkexec /usr/bin/tee` operation, because batctl's current CLI has no setter. Profile changes use the daemon's normal permissions. No custom root helper or polkit policy is installed. See [SECURITY.md](SECURITY.md) for exact privilege boundaries.
+
+QML is the shell's frontend format; the backend is Rust. The daemon's own `powerprofilesctl` may internally use Python. Runtime network access and telemetry are not used.
+
+## Update and remove
 
 ```bash
-bash uninstall.sh
+omarchy plugin update io.github.sabb4th.powerkit
+omarchy plugin remove io.github.sabb4th.powerkit
 ```
 
-Uninstall disables and archives the plugin without changing battery settings, batctl services, power profiles or saved state. Legacy installation flags `--with-controls` and `--monitor-only` remain accepted; installs use standard system authentication. Version 1's TLP controls and charts are no longer used. Their existing system files and historical data are untouched.
+For a manually copied installation, rerun `install.sh` to update and use `bash uninstall.sh` to disable and archive it. Removing PowerKit does not reset thresholds, modes, batctl services or power profiles. Persistent files are intentionally retained:
+
+| Location | Contents |
+| --- | --- |
+| `$XDG_STATE_HOME/omarchy-powerkit` (default `~/.local/state/omarchy-powerkit`) | Private display preferences and manual-installer backups |
+| `$XDG_CACHE_HOME/omarchy-powerkit` (default `~/.cache/omarchy-powerkit`) | Compiled source-launcher cache |
+| `/etc/batctl.conf` and batctl's systemd units | Managed by batctl only when persistence is explicitly requested |
+
+## Upgrade from Battery Studio / the old TLP repository
+
+The project was renamed from `tlp-omarchy-plugin`; the new permanent plugin ID is `io.github.sabb4th.powerkit`. From a source checkout:
+
+```bash
+bash install.sh --migrate
+# Or use an already-built backend:
+bash install.sh --migrate --prebuilt target/release/powerkit
+```
+
+Only `--migrate` authorizes the installer to back up `shell.json`, replace the exact old `local.battery-studio` ID in place and archive the old plugin directory. It preserves the bar position and other widget settings. Ordinary installation does not rewrite that configuration. Display preferences fall back to the old state directory until first saved under the new name. Old histories, TLP helper files and TLP configuration remain untouched and unused.
 
 ## Development
 
 ```bash
-cargo test --locked
-cargo clippy --locked --all-targets -- -D warnings
-cargo fmt --check
+bash check.sh
 cargo build --release --locked
-./target/release/battery-studio sample
+./target/release/powerkit sample
+bash scripts/package.sh
 ```
 
-The backend has no Python runtime dependency. QML is the shell's frontend format; the daemon's own `powerprofilesctl` may internally use Python. Monitoring exchanges JSON lines, refreshes every 5 seconds while open and every 30 seconds otherwise, and exits on stdin EOF. Display preferences use atomic writes to `$XDG_STATE_HOME/omarchy-battery-studio/preferences.json`.
+Checks require Rust `rustfmt`/`clippy`, Python 3 for isolated distribution tests, jq, and Node.js or Deno. The Omarchy validator runs when available locally; CI also runs the official validator pinned to a known Omarchy revision. GitHub Actions tests and packages each push; version tags produce checksummed Linux x86_64 release archives containing the executable and reviewable sources.
 
-Battery metrics and supported charge behaviours come from sysfs; batctl's text output supplies threshold capabilities and current limits. `previews/power-panel-v2.png` shows the current panel with simulated data; other images under `previews/` show version 1. See [VALIDACAO.md](VALIDACAO.md) for verification and limitations.
+The Rust process exchanges JSON lines with QML, polls every 5 seconds while open and 30 seconds otherwise, and exits on stdin EOF. Display preferences are atomically written with mode 0600. The launcher cache key includes the manifest, lockfile and Rust source, so native plugin updates rebuild when needed.
+
+See [validation notes](VALIDACAO.md), [marketplace submission](docs/marketplace-submission.md) and [release checklist](docs/PUBLISHING.md). MIT license; UI structure is inspired by Omarchy's standard power panel. The preview uses simulated readings. Older screenshots under `previews/` document previous versions.

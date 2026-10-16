@@ -16,7 +16,7 @@ Item {
     property double now: Date.now() / 1000
     readonly property var preferences: Object.assign({display_mode: "full"}, sample.preferences || {})
     readonly property string displayMode: Display.modes.indexOf(preferences.display_mode) >= 0 ? preferences.display_mode : "full"
-    readonly property string executable: decodeURIComponent(String(Qt.resolvedUrl("bin/battery-studio")).replace(/^file:\/\//, ""))
+    readonly property string executable: decodeURIComponent(String(Qt.resolvedUrl("bin/powerkit")).replace(/^file:\/\//, ""))
     readonly property var battery: {
         var list = sample.batteries || []
         for (var i = 0; i < list.length; ++i)
@@ -60,7 +60,7 @@ Item {
         command: [model.executable, "monitor"]
         stdinEnabled: true
         stdout: SplitParser { onRead: function(data) { model.receive(data) } }
-        stderr: SplitParser { onRead: function(data) { console.warn("Battery Studio: " + data) } }
+        stderr: SplitParser { onRead: function(data) { console.warn("PowerKit: " + data) } }
         onStarted: model.send({op: "visible", value: model.openPanels > 0})
         onExited: {
             if (model.clients > 0) {

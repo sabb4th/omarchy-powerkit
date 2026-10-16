@@ -1,0 +1,28 @@
+name: Check PowerKit
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Test, lint, format and check scripts
+        run: bash check.sh
+      - name: Validate against the official Omarchy schema
+        run: |
+          curl --fail --location --silent --show-error https://raw.githubusercontent.com/omacom/omarchy/246f33a2fef66411c990860d88e0823ae83987fc/bin/omarchy-plugin-validate -o "$RUNNER_TEMP/omarchy-plugin-validate"
+          bash "$RUNNER_TEMP/omarchy-plugin-validate" .
+      - name: Build release package
+        run: |
+          cargo build --release --locked
+          bash scripts/package.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: powerkit-linux-x86_64
+          path: dist/*

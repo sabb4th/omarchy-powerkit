@@ -1,0 +1,32 @@
+name: Release PowerKit
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Check tag matches package and manifest
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          test "$RELEASE_TAG" = "v$(jq -r .version manifest.json)"
+          test "$RELEASE_TAG" = "v$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')"
+      - run: bash check.sh
+      - name: Validate against the official Omarchy schema
+        run: |
+          curl --fail --location --silent --show-error https://raw.githubusercontent.com/omacom/omarchy/246f33a2fef66411c990860d88e0823ae83987fc/bin/omarchy-plugin-validate -o "$RUNNER_TEMP/omarchy-plugin-validate"
+          bash "$RUNNER_TEMP/omarchy-plugin-validate" .
+      - run: cargo build --release --locked
+      - run: bash scripts/package.sh
+      - name: Publish release and checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" dist/* --verify-tag --title "PowerKit $RELEASE_TAG" --generate-notes
