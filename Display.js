@@ -16,10 +16,10 @@ function percentText(value) {
     return value === null || value === undefined || !isFinite(value) ? "—" : Math.round(value) + "%"
 }
 
-function wattsText(value, language) {
+function wattsText(value) {
     if (value === null || value === undefined || !isFinite(value)) return "— W"
     var result = Number(value).toFixed(1)
-    return (language === "pt" ? result.replace(".", ",") : result) + " W"
+    return result + " W"
 }
 
 function runtimeText(hours) {
@@ -32,13 +32,13 @@ function profileText(key) {
     return key === "performance" ? "PRF" : key === "balanced" ? "BAL" : key === "power-saver" ? "SAV" : "—"
 }
 
-function barText(mode, battery, profile, language) {
+function barText(mode, battery, profile) {
     var b = battery || {}
     if (mode === "icon") return ""
     if (mode === "percentage") return percentText(b.percent)
-    if (mode === "watts") return wattsText(b.power_w, language)
+    if (mode === "watts") return wattsText(b.power_w)
     if (mode === "runtime") return runtimeText(b.hours)
     if (mode === "percentage-runtime") return percentText(b.percent) + " · " + runtimeText(b.hours)
     if (mode === "profile") return percentText(b.percent) + " · " + profileText(profile)
-    return percentText(b.percent) + " · " + wattsText(b.power_w, language)
+    return percentText(b.percent) + " · " + wattsText(b.power_w)
 }

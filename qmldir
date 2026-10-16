@@ -1,4 +1,3 @@
 singleton BatteryModel 1.0 BatteryModel.qml
 Dashboard 1.0 Dashboard.qml
-HistoryChart 1.0 HistoryChart.qml
 BatteryGlyph 1.0 BatteryGlyph.qml

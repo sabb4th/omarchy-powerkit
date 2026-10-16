@@ -1,19 +1,20 @@
 # Changelog
 
-## 1.1.0
+## 2.1.0
 
-- Compact panel: maximum content size 500 × 560 instead of 640 × 660; height adapts to each tab.
-- Eight tabs: Overview, Charge, Profiles, History, Battery, System, Settings and Extra charge.
-- TLP & system card preserved; only its text gains translations.
-- English and Portuguese, selected manually or from the system locale.
-- Right-click cycles seven persistent bar display modes; middle-click refreshes.
-- Shared battery graphic with eleven charge levels, unknown state and charging indicator.
-- CPU boost controls and reset confirmation expand only when requested.
-- Separate formatting and translation modules; atomic preferences and immediate feedback for rapid clicks.
-- Localized operation messages, CSV headers and diagnostics; bilingual polkit descriptions.
-- Existing history, charge settings and retention preferences are preserved.
+- Added hardware-advertised Auto, Inhibit charge and Force discharge controls for the selected battery.
+- Use the same kernel charge_behaviour interface as batctl, with validated arguments and standard system authentication.
+- Rebuilt the panel around Omarchy's native power layout: prominent percentage, charge gauge, two-column metrics and horizontal profiles.
+- Removed Settings and localization; the interface is English and bar appearance changes only through right-click.
+- Added design capacity, optional temperature/voltage and time to the actual charge limit.
+- Collapsed charge presets and custom limits into an expandable section.
 
-## 1.0.0
+## 2.0.0
 
-Initial native Omarchy Quattro/TLP plugin with power, runtime, battery health,
-charge thresholds, profiles, local history, CSV export and authenticated controls.
+- Replaced the Python/TLP collector and privileged helper with a Rust JSON-lines backend.
+- Added batctl presets, hardware-aware thresholds and boot/resume persistence controls.
+- Added power-profiles-daemon profiles through Omarchy's standard source-aware bridge.
+- Rebuilt the panel as Energy, Charge and Settings using Omarchy's UI components.
+- Preserved bar artwork, charging indicators, seven formats, mouse shortcuts and plugin ID.
+- Replaced Python setup with shell installation and locked Cargo release builds.
+- Removed TLP controls and version 1 charts/exports; old state remains untouched.

@@ -2,7 +2,6 @@ import QtQuick
 import qs.Commons as Commons
 import qs.Ui as Ui
 import "." as Local
-import "I18n.js" as Locale
 import "Display.js" as Display
 
 Ui.BarWidget {
@@ -11,23 +10,21 @@ Ui.BarWidget {
     readonly property bool opened: panelLoader.item ? panelLoader.item.opened : false
     readonly property bool popoutSwitchClosing: panelLoader.item ? panelLoader.item.popoutSwitchClosing : false
     readonly property var battery: Local.BatteryModel.sample.aggregate
-    readonly property string language: Local.BatteryModel.language
     readonly property string mode: Local.BatteryModel.displayMode
     readonly property string label: Display.barText(mode, battery,
-        (Local.BatteryModel.sample.tlp || {}).profile, language)
+        (Local.BatteryModel.sample.power || {}).profile)
     readonly property string stateLabel: battery ? (
-        battery.status === "Charging" ? tr("Carregando") :
-        battery.status === "Discharging" ? tr("Na bateria") : tr("Carga em espera")
-    ) : tr("Sem bateria")
+        battery.status === "Charging" ? "Charging" :
+        battery.status === "Discharging" ? "On battery" : "Charging paused"
+    ) : "No battery"
     readonly property var modeLabels: [
-        tr("Ícone + porcentagem + watts"), tr("Ícone + porcentagem"), tr("Somente ícone"),
-        tr("Ícone + watts"), tr("Ícone + autonomia"), tr("Ícone + porcentagem + autonomia"),
-        tr("Ícone + porcentagem + perfil")
+        "Icon + percentage + watts", "Icon + percentage", "Icon only",
+        "Icon + watts", "Icon + runtime", "Icon + percentage + runtime",
+        "Icon + percentage + profile"
     ]
     implicitWidth: button.implicitWidth
     implicitHeight: button.implicitHeight
 
-    function tr(text) { return Locale.tr(text, language) }
     function open() { if (panelLoader.item) panelLoader.item.open() }
     function close() { if (panelLoader.item) panelLoader.item.close() }
     function toggle() { if (panelLoader.item) panelLoader.item.toggle() }
@@ -62,9 +59,9 @@ Ui.BarWidget {
                     parts.implicitWidth + Commons.Style.space(14))
         text: root.label
         tooltipText: "Battery Studio · " + root.stateLabel +
-                     (Local.BatteryModel.stale ? "\n" + root.tr("Aguardando atualização") : "") +
-                     "\n" + root.tr("Formato: ") + root.modeLabels[Display.modes.indexOf(root.mode)] +
-                     "\n" + root.tr("Botão direito: próximo formato")
+                     (Local.BatteryModel.stale ? "\n" + "Waiting for an update" : "") +
+                     "\n" + "Display: " + root.modeLabels[Display.modes.indexOf(root.mode)] +
+                     "\n" + "Right-click: next display mode"
         Row {
             id: parts
             anchors.centerIn: parent

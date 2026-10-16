@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "local.battery-studio",
   "name": "Battery Studio",
-  "version": "1.1.0",
+  "version": "2.1.0",
   "author": "Ângela Sabát",
   "license": "MIT",
-  "description": "Theme-aware battery and TLP control, charge limits, profiles and local graphs. English and Portuguese.",
+  "description": "Battery care with batctl and power-profiles-daemon. Rust backend, native power panel and hardware charge behaviour controls.",
   "kinds": [
     "bar-widget"
   ],
@@ -13,7 +13,7 @@
     "barWidget": "BarWidget.qml"
   },
   "barWidget": {
-    "displayName": "Battery Studio · TLP",
+    "displayName": "Battery Studio",
     "category": "Power",
     "allowMultiple": false,
     "defaultSection": "right"

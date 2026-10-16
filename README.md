@@ -1,165 +1,55 @@
-# Battery Studio · TLP
+# Battery Studio · Omarchy
 
-**Version 1.1.0 · Omarchy Quattro (4.x)**
+A native-looking battery panel for the Omarchy Quickshell desktop, with a **Rust backend**, [batctl](https://github.com/Ooooze/batctl) charge thresholds and power-profiles-daemon profiles. The interface is entirely in English.
 
-Native, theme-aware battery monitoring and TLP controls. The compact panel has
-**Overview, Charge, Profiles, History, Battery, System, Settings and Extra charge**.
-The TLP & system card keeps its original fields and organization.
+The bar keeps its battery artwork, charging indicator, seven display formats and mouse shortcuts: **left-click** opens the panel, **right-click** changes the display format, and **middle-click** refreshes. Appearance is configured only from the bar; there is no Settings section.
 
-[Leia em português](README.pt-BR.md)
+![Compact power panel with simulated readings](previews/power-panel-v2.png)
+
+## Panel
+
+Inspired by [Omarchy's power panel](https://github.com/omacom/omarchy/tree/246f33a2fef66411c990860d88e0823ae83987fc/shell/plugins/panels/power): large percentage, charge gauge with a limit marker, compact two-column statistics and horizontal profile buttons.
+
+- **Battery:** health, cycles, current full capacity, design capacity, estimated runtime or time to the charge limit, and charging/discharging power. Temperature and voltage appear when temperature telemetry exists. Missing readings display `—`.
+- **Power profile:** the profiles actually advertised by the daemon. Uses the stock `omarchy-powerprofiles-set` bridge to remember the current source's profile.
+- **Charge behaviour:** **Auto**, **Inhibit charge** and **Force discharge**, restricted to modes advertised by the selected battery's kernel driver. The current mode is highlighted, with a short explanation of its effect.
+- **Charge limits:** expand to show four batctl presets, custom start/stop limits, boot/resume persistence and saved-limit restoration. These controls stay collapsed by default.
+
+**Charge behaviour applies to the selected battery. Thresholds apply to all batteries through batctl.** Auto follows the hardware's normal charging policy and thresholds. Inhibit charge pauses charging; AC power routing depends on hardware. Force discharge uses the battery even on AC power; switch back to Auto to stop it. Behaviour changes are live and are not saved or replayed by the plugin. Persistence covers charge thresholds only.
+
+The installed batctl CLI can read charge behaviour but has no setter. The plugin therefore writes the same standard `charge_behaviour` sysfs attribute used by batctl's backend, using `/usr/bin/pkexec /usr/bin/tee` with a validated power-supply entry and allowlisted mode passed over stdin. No shell or custom privileged helper is used. Only modes advertised by the real kernel attribute can be selected.
 
 ## Install
 
-Extract the archive and open a terminal in the omarchy-battery-studio directory.
-If needed, install the official Arch packages first:
+Requires Omarchy's Quickshell plugin API, Rust/Cargo for compilation, Ooooze's `batctl-tui` (`/usr/bin/batctl`), configured power-profiles-daemon, `jq`, `/usr/bin/tee`, polkit and a graphical authentication agent. Development checks also need Rust's `clippy` and `rustfmt` components and Node.js or Deno.
 
-    sudo pacman -S --needed tlp tlp-pd
-    sudo systemctl enable --now tlp.service tlp-pd.service
+```bash
+bash check.sh
+bash install.sh
+# Alternatively, install an already-built binary:
+bash install.sh --prebuilt target/release/battery-studio
+```
 
-The tlp-pd package is optional for this plugin but provides the profile API used
-by other desktop components. TLP conflicts with power-profiles-daemon; pacman
-may ask to replace that package. Other active power managers are diagnosed,
-not silently disabled by the installer.
+The installer does not install packages or change power-management services. It installs runtime files under `~/.config/omarchy/plugins/local.battery-studio`, archives the previous version under the XDG state directory and preserves an enabled widget's position. The plugin ID and display-format preference remain unchanged; old language preferences are ignored.
 
-Install the plugin and authenticated controls:
+Charge actions use system authentication. When persistence is active, changing thresholds also saves their new values using `batctl persist enable`. If this second step fails, the panel reports that live limits were applied but saving failed.
 
-    bash install.sh --with-controls
+```bash
+bash uninstall.sh
+```
 
-Monitoring only, without administrator controls:
+Uninstall disables and archives the plugin without changing battery settings, batctl services, power profiles or saved state. Legacy installation flags `--with-controls` and `--monitor-only` remain accepted; installs use standard system authentication. Version 1's TLP controls and charts are no longer used. Their existing system files and historical data are untouched.
 
-    bash install.sh --monitor-only
+## Development
 
-When upgrading from version 1.0, restart the shell after installation:
+```bash
+cargo test --locked
+cargo clippy --locked --all-targets -- -D warnings
+cargo fmt --check
+cargo build --release --locked
+./target/release/battery-studio sample
+```
 
-    omarchy-restart-shell
+The backend has no Python runtime dependency. QML is the shell's frontend format; the daemon's own `powerprofilesctl` may internally use Python. Monitoring exchanges JSON lines, refreshes every 5 seconds while open and every 30 seconds otherwise, and exits on stdin EOF. Display preferences use atomic writes to `$XDG_STATE_HOME/omarchy-battery-studio/preferences.json`.
 
-This loads the updated shared model. Existing history and TLP settings remain.
-Omarchy 3.x/Waybar uses a different contract and is not supported by this package.
-
-## Compact interface and languages
-
-Maximum panel content size is **500 × 560 logical pixels**, reduced from
-640 × 660. Height adapts to shorter tabs. The font, scale, colors and corners
-follow the active Omarchy theme. Long pages scroll; advanced CPU controls expand
-on request. The plugin runs inside the existing shell, not another Quickshell process.
-
-Select English, Portuguese or Automatic in **Settings → Language**. Automatic
-uses the system locale. Language and bar presentation are saved locally.
-
-## Bar interactions
-
-- **Left-click:** open or close the panel.
-- **Right-click:** cycle display modes.
-- **Middle-click:** refresh data.
-
-| Mode | Display |
-|---|---|
-| Full | Battery icon, percentage and watts |
-| Percentage | Icon and percentage |
-| Icon | Icon only |
-| Watts | Icon and battery power flow |
-| Runtime | Icon and estimated runtime |
-| Percentage + runtime | Icon, percentage and runtime |
-| Percentage + profile | Icon, percentage and PRF/BAL/SAV |
-
-The selected mode survives shell restarts. The battery graphic has levels from
-empty to full, an unknown state and a charging indicator. Choose a mode directly
-in **Settings → Bar display**. Vertical bars keep an icon-only presentation.
-
-## Battery and TLP features
-
-- Instantaneous battery power, runtime estimate, health, wear and cycle count.
-- Start/stop charge thresholds, presets and optional persistence.
-- One-time charging to 100%, restore saved limits and chargeonce on compatible hardware.
-- Automatic/manual TLP profiles, custom AC/battery policy with TLP 1.10+.
-- CPU boost settings per profile, where the driver supports them.
-- Local charge, power and health graphs; 1h, 6h, 24h, 7d and 30d ranges.
-- CSV export, power events, 7/30/90-day retention and a local diagnostic report.
-- Multiple batteries, charger information, CPU/battery temperatures, driver, governor and EPP.
-- Detection of active power-profiles-daemon, auto-cpufreq, tuned and tuned-ppd conflicts.
-
-Hardware capabilities are checked by TLP before every privileged change.
-Unsupported controls remain unavailable. Fixed Lenovo conservation modes are
-shown as on/off controls rather than invented percentage limits.
-
-## Understand the readings
-
-**Watts describe battery flow, not total wall power.** Positive values in the
-graph mean discharge; negative values mean charging. An idle battery may report
-zero even while the computer is using power from the charger.
-
-Runtime is estimated from current flow and may change with workload. Charging
-estimates use the stop threshold. Missing sensors show a dash. Wh values derived
-from Ah are labelled. Health is current full capacity divided by design capacity.
-Setting a lower limit does not force a discharge.
-
-## Persistence and permissions
-
-Preferences/history are stored under the XDG state directory, normally:
-
-    ~/.local/state/omarchy-battery-studio/
-
-The plugin saves its TLP changes only in:
-
-    /etc/tlp.d/99-battery-studio.conf
-
-External settings in /etc/tlp.conf take precedence. Effective values are checked
-before applying persistent changes; conflicts cause rollback. Original readable
-thresholds are stored for reset/uninstall. The root-owned helper uses isolated
-Python, an allowlist of operations and polkit authentication; no passwordless sudo
-rule is installed. Viewing the panel does not request administrator credentials.
-
-TLP charge capability inspection is cached against kernel/TLP/battery identity.
-The cache is for presentation; privileged controls always recheck the hardware.
-One collector is shared across monitors and stops when the last widget is disabled.
-Sampling is every 3 seconds with a panel open, 15 seconds otherwise; history is
-recorded once per minute. The plugin does not access the internet.
-
-Exports go to the system downloads directory. Critical battery notifications
-remain handled by Omarchy's existing battery service. Lowering retention deletes
-older history records.
-
-## Validate and remove
-
-    bash check.sh
-    bash check.sh --qml
-
-Python tests use simulated sysfs/TLP. JavaScript tests run when Node.js is present.
-The --qml option uses installed Omarchy imports. See [VALIDACAO.md](VALIDACAO.md)
-for executed checks and the distinction between Qt/adaptor tests and a real session.
-
-Remove only the widget, keeping controls/settings:
-
-    bash uninstall.sh
-
-Also remove the controls and restore available previous TLP settings:
-
-    bash uninstall.sh --remove-controls
-
-History/backups remain. TLP and tlp-pd are not uninstalled.
-
-## Compatibility and verification limits
-
-Requires Quickshell, QtQuick/QtQuick Controls, Python 3 and TLP. Controls also
-require polkit/pkexec. Traditional profiles work with TLP 1.8; Power saver requires
-1.9 and custom automatic policies require 1.10. Firmware/kernel decide charge
-features. The preview screenshots use **simulated data**.
-
-The code, Qt layouts, data flow and adapter contracts were tested. The authoring
-environment does not have your laptop's battery, TLP installation or a live
-Omarchy session. Firmware, authentication and installed shell integration still
-need verification on the target notebook.
-
-## References
-
-- [Omarchy Plugins development guide](https://plugins.omarchy.org/develop.html)
-- [Official shell contract](https://github.com/omacom/omarchy/blob/quattro/docs/omarchy-shell.md)
-- [TLP documentation](https://linrunner.de/tlp/index.html)
-- [TLP commands](https://linrunner.de/tlp/usage/tlp.html)
-- [Vendor capabilities](https://linrunner.de/tlp/settings/bc-vendors.html)
-- [TLP profiles and switching](https://linrunner.de/tlp/settings/operation.html)
-- [Linux power supply units](https://docs.kernel.org/power/power_supply_class.html)
-
-MIT licensed. This archive is a local-installable plugin project. It has not been
-published to GitHub or the marketplace. The bar/panel adapters follow Omarchy's
-MIT examples.
+Battery metrics and supported charge behaviours come from sysfs; batctl's text output supplies threshold capabilities and current limits. `previews/power-panel-v2.png` shows the current panel with simulated data; other images under `previews/` show version 1. See [VALIDACAO.md](VALIDACAO.md) for verification and limitations.

@@ -1,142 +1,72 @@
 pragma Singleton
 import QtQuick
 import Quickshell.Io
-import "I18n.js" as Locale
 import "Display.js" as Display
 
 Item {
     id: model
-    property var sample: ({ batteries: [], aggregate: null, tlp: {}, care: {}, cpu: {} })
-    property var history: ({ points: [], events: [], samples: 0 })
+    property var sample: ({batteries: [], aggregate: null, batctl: {}, power: {profiles: []}})
     property string selectedId: ""
-    property int historyHours: 24
     property bool busy: false
     property string message: ""
     property bool messageOk: true
     property int openPanels: 0
     property int clients: 0
-    property var pendingPreferences: ({})
-    readonly property var preferences: Object.assign({language: "auto", display_mode: "full", system_language: "pt"}, sample.preferences || {}, pendingPreferences)
-    readonly property string language: preferences.language === "pt" || preferences.language === "en" ? preferences.language : preferences.system_language
-    readonly property string displayMode: Display.modes.indexOf(preferences.display_mode) >= 0 ? preferences.display_mode : "full"
-    property double now: Date.now() / 1000
-    property int historyBucket: -1
     property bool workerParsed: false
-    readonly property string script: decodeURIComponent(String(Qt.resolvedUrl("scripts/backend.py")).replace(/^file:\/\//, ""))
+    property double now: Date.now() / 1000
+    readonly property var preferences: Object.assign({display_mode: "full"}, sample.preferences || {})
+    readonly property string displayMode: Display.modes.indexOf(preferences.display_mode) >= 0 ? preferences.display_mode : "full"
+    readonly property string executable: decodeURIComponent(String(Qt.resolvedUrl("bin/battery-studio")).replace(/^file:\/\//, ""))
     readonly property var battery: {
-        if (selectedId === "__all__") return sample.aggregate
         var list = sample.batteries || []
         for (var i = 0; i < list.length; ++i)
             if (list[i].id === selectedId) return list[i]
-        return sample.aggregate
+        return list.length ? list[0] : sample.aggregate
     }
-    readonly property bool stale: sample.ts ? now - sample.ts > 45 : true
-
-    function tr(text) { return Locale.tr(text, language) }
+    readonly property bool stale: !sample.ts || now - sample.ts > 65
+    function send(request) { if (collector.running) collector.write(JSON.stringify(request) + "\n") }
     function setPreference(key, value) {
         var changes = {}; changes[key] = value
-        pendingPreferences = Object.assign({}, pendingPreferences, changes)
-        if (key === "language" && !busy) message = ""
         send({op: "preferences", changes: changes})
     }
     function cycleDisplay() { setPreference("display_mode", Display.nextMode(displayMode)) }
-    function confirmPreferences(prefs) {
-        var next = Object.assign({}, pendingPreferences)
-        for (var key in next) if (next[key] === prefs[key]) delete next[key]
-        pendingPreferences = next
-    }
-    function send(request) {
-        if (collector.running) collector.write(JSON.stringify(request) + "\n")
-    }
-    function registerClient() {
-        clients += 1
-        if (!collector.running) collector.running = true
-    }
+    function registerClient() { clients++; if (!collector.running) collector.running = true }
     function unregisterClient() {
         clients = Math.max(0, clients - 1)
-        if (clients === 0) {
-            reconnect.stop()
-            collector.running = false
-            openPanels = 0
-        }
+        if (!clients) { reconnect.stop(); collector.running = false; openPanels = 0 }
     }
     function panelVisible(value) {
         openPanels = Math.max(0, openPanels + (value ? 1 : -1))
         send({op: "visible", value: openPanels > 0})
-        if (value) requestHistory()
     }
-    function requestHistory() {
-        if (battery) send({op: "history", battery: battery.id, hours: historyHours})
-    }
-    function refresh() { send({op: "refresh"}); requestHistory() }
-    function selectBattery(id) {
-        selectedId = id
-        history = ({points: [], events: [], samples: 0})
-        requestHistory()
-    }
-    function selectHistory(hours) {
-        historyHours = hours
-        history = ({points: [], events: [], samples: 0})
-        requestHistory()
-    }
-    function setRetention(days) { setPreference("retention_days", days) }
-    function action(op, args) { startWorker("action", {op: op, args: args || []}) }
-    function exportHistory() {
-        if (battery) startWorker("export", {battery: battery.id, hours: historyHours})
-    }
-    function report() { startWorker("report", {}) }
-    function startWorker(command, parameters) {
+    function refresh() { send({op: "refresh"}) }
+    function selectBattery(id) { selectedId = id }
+    function action(op, args) {
         if (busy) return
-        busy = true
-        message = ""
-        workerParsed = false
-        worker.command = ["python3", script, command, JSON.stringify(Object.assign({}, parameters, {language: language}))]
+        busy = true; message = ""; workerParsed = false
+        worker.command = [executable, "action", JSON.stringify({op: op, args: args || []})]
         worker.running = true
     }
     function receive(line) {
         try {
             var data = JSON.parse(line)
-            if (data.type === "sample") {
-                sample = data
-                if (data.preferences) confirmPreferences(data.preferences)
-                var valid = selectedId === "__all__" && data.batteries.length > 1
-                for (var i = 0; i < data.batteries.length; ++i)
-                    valid = valid || selectedId === data.batteries[i].id
-                if (!valid) selectedId = data.aggregate ? data.aggregate.id : ""
-                var bucket = Math.floor(data.ts / 60)
-                if (bucket !== historyBucket || history.points.length === 0) {
-                    historyBucket = bucket
-                    if (openPanels > 0) requestHistory()
-                }
-            } else if (data.type === "preferences") {
-                sample = Object.assign({}, sample, {preferences: data.preferences, retention_days: data.preferences.retention_days})
-                confirmPreferences(data.preferences)
-            } else if (data.type === "history") {
-                if (battery && data.battery === battery.id && data.hours === historyHours)
-                    history = data
-            } else {
-                message = data.message || tr("Resposta recebida.")
-                messageOk = data.type !== "error" && data.ok !== false
-            }
-        } catch (error) {
-            message = tr("Não foi possível ler os dados do coletor.")
-            messageOk = false
-        }
+            if (data.type === "sample") sample = data
+            else if (data.type === "preferences") sample = Object.assign({}, sample, {preferences: data.preferences})
+            else { message = data.message || ""; messageOk = data.type !== "error" }
+        } catch (error) { message = "Invalid collector response."; messageOk = false }
     }
     Process {
         id: collector
-        command: ["python3", model.script, "monitor"]
+        command: [model.executable, "monitor"]
         stdinEnabled: true
         stdout: SplitParser { onRead: function(data) { model.receive(data) } }
-        stderr: SplitParser {
-            onRead: function(data) { console.warn("Battery Studio collector: " + data) }
-        }
+        stderr: SplitParser { onRead: function(data) { console.warn("Battery Studio: " + data) } }
         onStarted: model.send({op: "visible", value: model.openPanels > 0})
-        onExited: function(exitCode, exitStatus) {
-            if (model.clients === 0) return
-            model.message = tr("Coletor interrompido. Tentando reconectar…")
-            model.messageOk = false
-            reconnect.start()
+        onExited: {
+            if (model.clients > 0) {
+                model.message = "Collector unavailable. Check the installation."
+                model.messageOk = false; reconnect.start()
+            }
         }
     }
     Process {
@@ -146,21 +76,15 @@ Item {
                 try {
                     var result = JSON.parse(text)
                     model.workerParsed = true
-                    model.message = result.message || tr("Operação concluída.")
                     model.messageOk = result.ok === true
-                } catch (error) {
-                    model.message = tr("A operação não retornou uma resposta válida.")
-                    model.messageOk = false
-                }
+                    model.message = result.ok ? "Setting applied." : result.message
+                } catch (error) { model.messageOk = false }
             }
         }
-        stderr: SplitParser {
-            onRead: function(data) { console.warn("Battery Studio action: " + data) }
-        }
-        onExited: function(exitCode, exitStatus) {
+        onExited: {
             model.busy = false
             if (!model.workerParsed) {
-                model.message = tr("Não foi possível executar a operação. Verifique Python e polkit.")
+                model.message = "Operation interrupted or authentication cancelled."
                 model.messageOk = false
             }
             model.refresh()

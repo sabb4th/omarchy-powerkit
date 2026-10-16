@@ -31,13 +31,19 @@ Ui.Panel {
         bar: root.bar
         open: root.opened
         focusTarget: keys
-        contentWidth: fittedContentWidth(Commons.Style.space(500))
+        contentWidth: fittedContentWidth(Commons.Style.space(440))
         contentHeight: fittedContentHeight(Math.min(Commons.Style.space(560), Math.max(Commons.Style.space(260), dashboard.desiredHeight)))
-        Ui.PanelKeyCatcher {
+        Item {
             id: keys
             anchors.fill: parent
-            onCloseRequested: root.close()
-            onTabRequested: function(direction) { root.switchPanel(direction) }
+            focus: true
+            Keys.onEscapePressed: root.close()
+            Keys.onPressed: function(event) {
+                if (event.key === Qt.Key_Tab && (event.modifiers & Qt.ControlModifier)) {
+                    root.switchPanel(event.modifiers & Qt.ShiftModifier ? -1 : 1)
+                    event.accepted = true
+                }
+            }
             Local.Dashboard {
                 id: dashboard
                 anchors.fill: parent

@@ -30,7 +30,6 @@ Item {
             height: Math.max(0, body.height - 2 * (body.border.width + 1))
             radius: Math.max(0, body.radius - 1)
             color: glyph.fillColor
-            opacity: glyph.charging ? 0.6 : 1
             Behavior on width { NumberAnimation { duration: 140 } }
         }
     }
@@ -56,7 +55,10 @@ Item {
         onPaint: {
             var ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)
-            ctx.fillStyle = glyph.foreground
+            ctx.fillStyle = glyph.background
+            ctx.strokeStyle = glyph.foreground
+            ctx.lineWidth = Math.max(1, height * 0.08)
+            ctx.lineJoin = "round"
             ctx.beginPath()
             ctx.moveTo(width * 0.55, height * 0.07)
             ctx.lineTo(width * 0.32, height * 0.55)
@@ -65,10 +67,12 @@ Item {
             ctx.lineTo(width * 0.71, height * 0.41)
             ctx.lineTo(width * 0.54, height * 0.41)
             ctx.closePath()
+            ctx.stroke()
             ctx.fill()
         }
     }
     onForegroundChanged: bolt.requestPaint()
+    onBackgroundChanged: bolt.requestPaint()
     onWidthChanged: bolt.requestPaint()
     onHeightChanged: bolt.requestPaint()
 }
