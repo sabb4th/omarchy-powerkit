@@ -16,7 +16,11 @@ O backend compila uma vez no cache do usuário; Cargo pode precisar baixar as de
 
 ## Usar
 
-Clique esquerdo abre o painel; direito alterna a aparência da barra; meio atualiza. O painel oferece perfis Saver → Balanced → Performance, modos Auto / Inhibit charge / Force discharge, indicadores da bateria e limites em uma seção expansível. O raio de carregamento fica à esquerda do ícone, sem preenchimento cinza.
+Clique esquerdo abre o painel; direito alterna a aparência da barra; meio atualiza. Capacity e Design foram substituídos por controles de governador e preferência de energia da CPU, com valores ativos e opções suportadas. No driver Intel, selecione Powersave para ajustar a preferência quando Performance a bloquear. As alterações são temporárias, valem para todas as políticas de CPU e podem ser substituídas pelo perfil de energia.
+
+O painel não mostra mais janelas ao passar o mouse. O raio mantém espaço reservado, e as mudanças de carga, formato e destaque usam transições curtas, sem animação contínua em repouso.
+
+O painel oferece perfis Saver → Balanced → Performance, modos Auto / Inhibit charge / Force discharge, indicadores da bateria e limites em uma seção expansível. O raio de carregamento fica à esquerda do ícone, sem preenchimento cinza.
 
 Os modos valem para a bateria selecionada; limites do batctl valem para todas. Force discharge usa a bateria mesmo conectado à tomada; Auto encerra essa descarga forçada. O plugin não salva nem reaplica o modo: a persistência cobre somente os limites. Alterações de carga solicitam autenticação do sistema.
 

@@ -248,6 +248,133 @@ fn aggregate(batteries: &[Value]) -> Value {
     };
     json!({"id":"__all__","percent":energy.zip(full).filter(|(_,f)|*f>0.0).map(|(e,f)|e/f*100.0),"energy_wh":energy,"full_wh":full,"power_w":signed_power.map(f64::abs),"status":status,"hours":remaining.zip(signed_power).filter(|(_,p)|p.abs()>0.1).map(|(e,p)|e/p.abs())})
 }
+const CPU_GOVERNORS: &[&str] = &[
+    "powersave",
+    "performance",
+    "schedutil",
+    "ondemand",
+    "conservative",
+    "userspace",
+];
+const CPU_PREFERENCES: &[&str] = &[
+    "default",
+    "performance",
+    "balance_performance",
+    "balance_power",
+    "power",
+];
+
+fn cpu_policies(root: &Path) -> Vec<PathBuf> {
+    let mut policies: Vec<PathBuf> = fs::read_dir(root)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|entry| {
+            let name = entry.file_name();
+            let name = name.to_str()?;
+            let suffix = name.strip_prefix("policy")?;
+            if !suffix.is_empty()
+                && suffix.bytes().all(|c| c.is_ascii_digit())
+                && entry.path().is_dir()
+            {
+                Some(entry.path())
+            } else {
+                None
+            }
+        })
+        .collect();
+    policies.sort();
+    policies
+}
+fn cpu_values(path: &Path, file: &str, allowlist: &[&str]) -> Vec<String> {
+    read(path.join(file))
+        .split_whitespace()
+        .filter(|v| allowlist.contains(v))
+        .map(str::to_owned)
+        .collect()
+}
+fn cpu_snapshot(root: &Path) -> Value {
+    let policies = cpu_policies(root);
+    let common = |file: &str| -> Option<String> {
+        let first = read(policies.first()?.join(file));
+        if first.is_empty() {
+            return None;
+        }
+        Some(if policies.iter().all(|p| read(p.join(file)) == first) {
+            first
+        } else {
+            "mixed".into()
+        })
+    };
+    let intersection = |file: &str, allowed: &[&str]| -> Vec<String> {
+        let Some(first) = policies.first() else {
+            return vec![];
+        };
+        cpu_values(first, file, allowed)
+            .into_iter()
+            .filter(|value| {
+                policies
+                    .iter()
+                    .all(|p| cpu_values(p, file, allowed).contains(value))
+            })
+            .collect()
+    };
+    let locked = policies.iter().any(|p| {
+        read(p.join("scaling_driver")) == "intel_pstate"
+            && read(p.join("scaling_governor")) == "performance"
+    });
+    let available_governors = intersection("scaling_available_governors", CPU_GOVERNORS);
+    let available_preferences =
+        intersection("energy_performance_available_preferences", CPU_PREFERENCES);
+    json!({"count":policies.len(),"driver":common("scaling_driver"),"governor":common("scaling_governor"),"preference":common("energy_performance_preference"),"governors":available_governors,"preferences":available_preferences,"preference_locked":locked,"policies":policies.iter().map(|p|json!({"id":p.file_name().unwrap().to_string_lossy(),"governor":read(p.join("scaling_governor")),"preference":read(p.join("energy_performance_preference"))})).collect::<Vec<_>>()})
+}
+fn cpu_targets(root: &Path, op: &str, args: &[Value]) -> Result<(Vec<PathBuf>, String), String> {
+    let [value] = args else {
+        return Err("Expected one CPU setting".into());
+    };
+    let value = value.as_str().ok_or("Invalid CPU setting")?;
+    let (attribute, available, allowed): (&str, &str, &[&str]) = match op {
+        "cpu-governor" => (
+            "scaling_governor",
+            "scaling_available_governors",
+            CPU_GOVERNORS,
+        ),
+        "cpu-preference" => (
+            "energy_performance_preference",
+            "energy_performance_available_preferences",
+            CPU_PREFERENCES,
+        ),
+        _ => return Err("Invalid CPU operation".into()),
+    };
+    if !allowed.contains(&value) {
+        return Err("Invalid CPU setting".into());
+    }
+    let policies = cpu_policies(root);
+    if policies.is_empty() {
+        return Err("CPU frequency controls are unavailable".into());
+    }
+    let mut targets = vec![];
+    for policy in policies {
+        if !policy.join(attribute).is_file()
+            || !cpu_values(&policy, available, allowed)
+                .iter()
+                .any(|v| v == value)
+        {
+            return Err("This setting is not supported by every CPU policy".into());
+        }
+        if op == "cpu-preference"
+            && value != "performance"
+            && read(policy.join("scaling_driver")) == "intel_pstate"
+            && read(policy.join("scaling_governor")) == "performance"
+        {
+            return Err(
+                "Select the Powersave governor before changing the energy preference".into(),
+            );
+        }
+        targets.push(policy.join(attribute));
+    }
+    Ok((targets, value.to_owned()))
+}
 fn sample(prefs: &Value, root: &Path) -> Value {
     let detect = run("/usr/bin/batctl", &["detect"], 5);
     let status = run("/usr/bin/batctl", &["status"], 5);
@@ -287,7 +414,7 @@ fn sample(prefs: &Value, root: &Path) -> Value {
             PROFILES.iter().find(|&&known| known == p).copied()
         })
         .collect();
-    json!({"type":"sample","ts":SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs_f64(),"batteries":batteries,"aggregate":aggregate(&batteries),"ac":ac,"batctl":{"available":detect.is_ok() && status.is_ok(),"backend":field(d,"Backend:"),"start":capability(d,"Start threshold:"),"stop":capability(d,"Stop threshold:"),"boot":s.contains("boot=true"),"resume":s.contains("resume=true"),"error":detect.as_ref().err().or(status.as_ref().err()),"warning":s.lines().filter(|l| l.contains("Warning:") || l.contains("overridden")).collect::<Vec<_>>().join("\n")},"power":{"profile":profile.as_ref().ok(),"profiles":available,"error":profile.err().or(list.err())},"preferences":prefs})
+    json!({"type":"sample","ts":SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs_f64(),"batteries":batteries,"aggregate":aggregate(&batteries),"ac":ac,"batctl":{"available":detect.is_ok() && status.is_ok(),"backend":field(d,"Backend:"),"start":capability(d,"Start threshold:"),"stop":capability(d,"Stop threshold:"),"boot":s.contains("boot=true"),"resume":s.contains("resume=true"),"error":detect.as_ref().err().or(status.as_ref().err()),"warning":s.lines().filter(|l| l.contains("Warning:") || l.contains("overridden")).collect::<Vec<_>>().join("\n")},"cpu":cpu_snapshot(Path::new("/sys/devices/system/cpu/cpufreq")),"power":{"profile":profile.as_ref().ok(),"profiles":available,"error":profile.err().or(list.err())},"preferences":prefs})
 }
 fn prefs_path() -> PathBuf {
     let base = env::var_os("XDG_STATE_HOME")
@@ -382,6 +509,18 @@ fn action_args(op: &str, args: &[Value]) -> Result<Vec<String>, String> {
 fn action(request: &Value) -> Result<String, String> {
     let op = request["op"].as_str().unwrap_or("");
     let args = request["args"].as_array().ok_or("Missing arguments")?;
+    if matches!(op, "cpu-governor" | "cpu-preference") {
+        let (paths, value) = cpu_targets(Path::new("/sys/devices/system/cpu/cpufreq"), op, args)?;
+        let mut arguments = vec!["/usr/bin/tee"];
+        for path in &paths {
+            arguments.push(path.to_str().ok_or("Invalid CPU policy path")?);
+        }
+        run_input("/usr/bin/pkexec",&arguments,120,Some(&format!("{value}\n"))).map_err(|error|format!("CPU changes may be partially applied. Refresh to check the current values. {error}"))?;
+        if paths.iter().any(|path| read(path) != value) {
+            return Err("CPU settings changed while applying. Refresh to see the active values; your power profile may have overridden them.".into());
+        }
+        return Ok("CPU setting applied to all active policies".into());
+    }
     if op == "behaviour" {
         let (path, mode) = behaviour_target(Path::new("/sys/class/power_supply"), args)?;
         // batctl's backend writes this same sysfs attribute. Its CLI has no setter.
@@ -657,6 +796,75 @@ mod tests {
         fs::write(battery_dir.join("present"), "0").unwrap();
         assert!(behaviour_target(&dir, &[json!("BAT0"), json!("auto")]).is_err());
         fs::remove_dir_all(dir).unwrap();
+    }
+    #[test]
+    fn cpu_controls_require_common_support_and_reject_invalid_values() {
+        let root = env::temp_dir().join(format!("powerkit-cpu-test-{}", std::process::id()));
+        fs::create_dir_all(root.join("not-a-policy")).unwrap();
+        for id in ["policy0", "policy1"] {
+            let policy = root.join(id);
+            fs::create_dir_all(&policy).unwrap();
+            for (file, value) in [
+                ("scaling_driver", "intel_pstate"),
+                ("scaling_governor", "powersave"),
+                ("scaling_available_governors", "performance powersave"),
+                ("energy_performance_preference", "balance_power"),
+                (
+                    "energy_performance_available_preferences",
+                    "default performance balance_performance balance_power power",
+                ),
+            ] {
+                fs::write(policy.join(file), value).unwrap();
+            }
+        }
+        assert_eq!(cpu_snapshot(&root)["count"], 2);
+        assert_eq!(cpu_snapshot(&root)["governor"], "powersave");
+        assert_eq!(cpu_snapshot(&root)["preference"], "balance_power");
+        assert_eq!(
+            cpu_targets(&root, "cpu-governor", &[json!("performance")])
+                .unwrap()
+                .0
+                .len(),
+            2
+        );
+        assert_eq!(
+            cpu_targets(&root, "cpu-preference", &[json!("balance_performance")])
+                .unwrap()
+                .0
+                .len(),
+            2
+        );
+        for args in [
+            json!([]),
+            json!(["../performance"]),
+            json!(["performance; reboot"]),
+            json!([true]),
+            json!(["performance", "policy0"]),
+        ] {
+            assert!(cpu_targets(&root, "cpu-governor", args.as_array().unwrap()).is_err());
+        }
+        assert!(cpu_targets(&root, "unknown", &[json!("performance")]).is_err());
+        fs::write(root.join("policy1/scaling_governor"), "performance").unwrap();
+        assert_eq!(cpu_snapshot(&root)["governor"], "mixed");
+        assert_eq!(cpu_snapshot(&root)["preference_locked"], true);
+        assert!(cpu_targets(&root, "cpu-preference", &[json!("balance_power")]).is_err());
+        fs::write(
+            root.join("policy1/scaling_available_governors"),
+            "powersave",
+        )
+        .unwrap();
+        assert_eq!(cpu_snapshot(&root)["governors"], json!(["powersave"]));
+        assert!(cpu_targets(&root, "cpu-governor", &[json!("performance")]).is_err());
+        fs::remove_file(root.join("policy1/energy_performance_preference")).unwrap();
+        assert!(cpu_targets(&root, "cpu-preference", &[json!("performance")]).is_err());
+        fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn absent_cpu_driver_is_read_only() {
+        let root = Path::new("/tmp/powerkit-nonexistent-cpufreq-path");
+        assert_eq!(cpu_snapshot(root)["count"], 0);
+        assert!(cpu_snapshot(root)["governor"].is_null());
+        assert!(cpu_targets(root, "cpu-governor", &[json!("powersave")]).is_err());
     }
     #[test]
     fn validates_preferences() {

@@ -1,6 +1,18 @@
-# Validation · PowerKit 3.0.0
+# Validation · PowerKit 3.1.0
 
 Validated on 2026-10-15 with Omarchy Quattro and a ThinkPad battery backend.
+
+## 3.1.0 CPU controls and visual refinement
+
+- Ten Rust tests plus two isolated distribution tests pass, along with Clippy, rustfmt, JavaScript presentation checks and Omarchy manifest validation.
+- CPU fixtures cover mixed policies, intersection of advertised options, malformed values and policy arguments, Intel Performance/EPP constraints, missing attributes and absent CPU drivers. No authentication or hardware write is performed by these tests.
+- Read-only verification of the real notebook reports eight intel_pstate policies, governor powersave and preference balance_power. The available governors and all five advertised preference names are surfaced correctly.
+- The real Quickshell runtime loaded simulated Powersave, Intel Performance/EPP-locked and unsupported CPU states without QML errors. Full-width labels, dropdowns, disabled-state readability and compact help were visually inspected.
+- An isolated instance of the actual BarWidget (with mock host/model/panel) verified unchanged width across charging transitions and completed display-mode transitions. The native bar's tooltip handler ignores the empty tooltip string. No tooltip is configured on the plugin's other buttons either.
+- The final preview is saved as preview.png. Charging and active-state bar captures are in previews/bar-charging-v3.1.png and previews/bar-active-v3.1.png. All preview values are simulated.
+- Release 3.1.0 compiles locally. CPU writes are live overrides, checked against every active policy and verified after applying; failures can be partial and are reported. No real CPU/battery settings or power profile were changed during validation.
+
+## Previous release validation
 
 ## Completed checks
 

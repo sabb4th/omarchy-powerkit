@@ -20,19 +20,20 @@ If Cargo is missing, install Rust using your normal package-management flow (on 
 
 - **Left-click:** open or close the panel. **Escape:** close it.
 - **Right-click:** cycle seven bar formats. **Middle-click:** refresh.
+- **CPU controls:** the active governor and energy-performance preference replace Capacity/Design. Select supported values such as Powersave, Performance, Balanced power (`balance_power`) or Balanced performance (`balance_performance`). Changes apply to every active CPU policy with system authentication. Mixed-policy states and unsupported controls are shown explicitly. These are live overrides: power profiles can change them again; PowerKit does not persist or continuously enforce them. With active Intel P-state and the Performance governor, select Powersave before changing the preference.
 - **Profiles:** Saver → Balanced → Performance, limited to profiles actually offered by the daemon. Uses Omarchy's standard source-aware bridge to remember the AC/battery choice.
 - **Charge behaviour:** Auto, Inhibit charge and Force discharge, restricted to the selected battery's advertised modes. A short description explains the current mode.
 - **Charge limits:** expand for four hardware-adapted batctl presets, custom start/stop limits, boot/resume persistence and saved-limit restoration.
 
-The panel shows health, charge cycles, full/design capacity, power and estimated runtime or time to the charge limit. Temperature and voltage appear when temperature telemetry exists. Missing values display `—`. The interface is English; the appearance follows your Omarchy theme.
+The panel shows health, charge cycles, CPU governor/energy preference, power and estimated runtime or time to the charge limit. Temperature and voltage appear when temperature telemetry exists. Missing values display `—`. The interface is English; the appearance follows your Omarchy theme.
 
 **Charge behaviour applies to the selected battery. Thresholds apply to all batteries through batctl.** Auto follows normal charging policy and limits. Inhibit charge pauses charging; power routing depends on hardware. Force discharge uses the battery even on AC power: select Auto to stop it. Behaviour is not saved or replayed by PowerKit. The persistence switch saves **thresholds only**. When persistent thresholds change, PowerKit updates the saved values too; a failed save is reported separately from live application.
 
-The charging indicator is a solid lightning bolt to the **left** of the battery. The battery fill remains solid, without a grey charging overlay.
+The charging indicator is a solid lightning bolt to the **left** of the battery. Its reserved space prevents a layout jump on AC transitions. Charge level, bolt visibility, display-format changes, hover and open states use short transitions; the fill remains solid. There is no hover tooltip and no continuous animation while idle.
 
 ## Permissions and dependencies
 
-Read-only monitoring requires no authentication. Charge changes request standard system authentication through polkit. Thresholds/persistence use `pkexec /usr/bin/batctl`; behaviour uses the same kernel `charge_behaviour` interface as batctl's backend through a validated `pkexec /usr/bin/tee` operation, because batctl's current CLI has no setter. Profile changes use the daemon's normal permissions. No custom root helper or polkit policy is installed. See [SECURITY.md](SECURITY.md) for exact privilege boundaries.
+Read-only monitoring requires no authentication. Charge changes request standard system authentication through polkit. Thresholds/persistence use `pkexec /usr/bin/batctl`; behaviour uses the same kernel `charge_behaviour` interface as batctl's backend through a validated `pkexec /usr/bin/tee` operation, because batctl's current CLI has no setter. CPU changes use a fixed `pkexec /usr/bin/tee` invocation after validating every discovered CPU policy, the advertised options and Intel Performance/EPP constraints; values are read back after applying. A failed multi-policy write may be partial and is reported. Profile changes use the daemon's normal permissions. No custom root helper or polkit policy is installed. See [SECURITY.md](SECURITY.md) for exact privilege boundaries.
 
 QML is the shell's frontend format; the backend is Rust. The daemon's own `powerprofilesctl` may internally use Python. Runtime network access and telemetry are not used.
 

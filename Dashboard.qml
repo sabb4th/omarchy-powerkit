@@ -23,6 +23,7 @@ Item {
     readonly property var sample: backend ? backend.sample : ({})
     readonly property var b: backend && backend.battery ? backend.battery : ({})
     readonly property var ctl: sample.batctl || ({})
+    readonly property var cpu: sample.cpu || ({count: 0, governors: [], preferences: []})
     readonly property var power: sample.power || ({profiles: []})
     readonly property var orderedProfiles: {
         var available = power.profiles || []
@@ -54,6 +55,16 @@ Item {
         if (mode === "inhibit-charge") return "Charging is paused. AC can power the laptop; switch to Auto to resume charging."
         if (mode === "force-discharge") return "Uses the battery even on AC power. Switch to Auto to stop forced discharge."
         return "Charges automatically within your battery's charge limits."
+    }
+    function cpuLabel(value) {
+        var labels = {powersave:"Powersave", performance:"Performance", balance_power:"Balanced power", balance_performance:"Balanced performance", power:"Power saving", default:"System default", mixed:"Mixed policies", schedutil:"Schedutil", ondemand:"On demand", conservative:"Conservative", userspace:"Userspace"}
+        return labels[value] || value || "Unavailable"
+    }
+    function cpuOptions(values, current) {
+        var options = (values || []).map(function(value) { return {value:value, label:root.cpuLabel(value)} })
+        if (current === "mixed") options.unshift({value:"mixed",label:"Mixed policies"})
+        if (!options.length) options.push({value:"",label:"Unavailable"})
+        return options
     }
     function syncDraft() {
         if (dirty) return
@@ -122,7 +133,7 @@ Item {
         ColumnLayout {
             id: content
             width: scroll.availableWidth
-            spacing: root.u(14)
+            spacing: root.u(12)
 
             // Same hierarchy as Omarchy's power panel: icon, state, large percentage.
             RowLayout {
@@ -196,8 +207,7 @@ Item {
                     Layout.preferredWidth: 1
                     spacing: root.u(7)
                     InfoPair { label: "Health"; value: root.fmt(root.b.health, "%") }
-                    InfoPair { label: "Capacity"; value: root.fmt(root.b.full_wh, " Wh") }
-                    InfoPair { label: "Design"; value: root.fmt(root.b.design_wh, " Wh") }
+                    InfoPair { label: root.b.status === "Charging" ? "To " + root.chargeLimit + "%" : "Time left"; value: root.runtime() }
                     InfoPair { visible: root.known(root.b.temperature_c); label: "Temperature"; value: root.fmt(root.b.temperature_c, " °C") }
                 }
                 ColumnLayout {
@@ -205,9 +215,60 @@ Item {
                     Layout.preferredWidth: 1
                     spacing: root.u(7)
                     InfoPair { label: "Cycles"; value: root.known(root.b.cycles) ? String(root.b.cycles) : "—" }
-                    InfoPair { label: root.b.status === "Charging" ? "To " + root.chargeLimit + "%" : "Time left"; value: root.runtime() }
                     InfoPair { label: root.b.status === "Charging" ? "Charging" : root.b.status === "Discharging" ? "Discharging" : "Power"; value: Display.wattsText(root.b.power_w) }
                     InfoPair { visible: root.known(root.b.temperature_c); label: "Voltage"; value: root.fmt(root.b.voltage_v, " V") }
+                }
+            }
+            Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: cpuControls.implicitHeight + root.u(20)
+                radius: root.cornerRadius
+                color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.035)
+                border.width: 1
+                border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
+                ColumnLayout {
+                    id: cpuControls
+                    anchors.fill: parent
+                    anchors.margins: root.u(10)
+                    spacing: root.u(8)
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Label { text: "Governor"; Layout.preferredWidth: root.u(132); Layout.fillWidth: false; color: root.foreground; opacity: 0.7; wrapMode: Text.NoWrap }
+                        Ui.Dropdown {
+                            Layout.fillWidth: true
+                            showLabel: false
+                            value: root.cpu.governor || ""
+                            options: root.cpuOptions(root.cpu.governors, root.cpu.governor)
+                            foreground: root.foreground
+                            background: root.background
+                            fontFamily: root.fontFamily
+                            enabled: root.fresh && !root.busy && root.cpu.governors.length > 0
+                            opacity: enabled ? 1 : 0.78
+                            onChanged: function(value) { if (value && value !== "mixed" && value !== root.cpu.governor) root.act("cpu-governor", [value]) }
+                        }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Label { text: "Energy preference"; Layout.preferredWidth: root.u(132); Layout.fillWidth: false; color: root.foreground; opacity: 0.7; wrapMode: Text.NoWrap }
+                        Ui.Dropdown {
+                            Layout.fillWidth: true
+                            showLabel: false
+                            value: root.cpu.preference || ""
+                            options: root.cpuOptions(root.cpu.preferences, root.cpu.preference)
+                            foreground: root.foreground
+                            background: root.background
+                            fontFamily: root.fontFamily
+                            enabled: root.fresh && !root.busy && !root.cpu.preference_locked && root.cpu.preferences.length > 0
+                            opacity: enabled ? 1 : 0.78
+                            onChanged: function(value) { if (value && value !== "mixed" && value !== root.cpu.preference) root.act("cpu-preference", [value]) }
+                        }
+                    }
+                    Label {
+                        text: !root.cpu.count ? "CPU controls are not available on this system." : root.cpu.preference_locked ? "Select Powersave to adjust energy preference." : "All CPU policies · profiles may override."
+                        color: root.foreground
+                        opacity: 0.62
+                        font.pixelSize: Commons.Style.font.bodySmall
+                    }
                 }
             }
             Rule {}
@@ -228,7 +289,6 @@ Item {
                             iconText: root.profileIcon(modelData)
                             iconSize: Commons.Style.font.title
                             active: root.power.profile === modelData
-                            tooltipText: modelData
                             onClicked: root.act("profile", [modelData])
                         }
                     }
@@ -251,7 +311,6 @@ Item {
                             Layout.preferredWidth: 1
                             text: root.behaviourLabel(modelData)
                             active: root.behaviour.current === modelData
-                            tooltipText: modelData + "\n" + root.behaviourHelp(modelData)
                             enabled: !root.busy && root.fresh
                             onClicked: root.act("behaviour", [root.b.id, modelData])
                         }
@@ -351,7 +410,7 @@ Item {
                     elide: Text.ElideRight
                     wrapMode: Text.NoWrap
                 }
-                Action { text: "Refresh"; bordered: false; tooltipText: "Refresh battery and power profiles"; onClicked: root.backend.refresh() }
+                Action { text: "Refresh"; bordered: false; onClicked: root.backend.refresh() }
             }
         }
     }

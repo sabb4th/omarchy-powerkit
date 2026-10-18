@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.1.0
+
+- Replaced Capacity/Design with full-width CPU governor and energy-preference controls, including active/mixed values and hardware-advertised choices.
+- Added validated, authenticated CPU changes across active policies, Intel Performance/EPP handling and readback verification.
+- Removed hover tooltips; improved control-label contrast and spacing.
+- Added smooth level, charging-bolt, text, width and hover/open transitions with a stable charging-icon slot and no idle animation loop.
+
 ## 3.0.0 · PowerKit
 
 - Renamed the project/repository to PowerKit / omarchy-powerkit and adopted io.github.sabb4th.powerkit as the permanent marketplace ID.

@@ -32,7 +32,7 @@ Ui.Panel {
         open: root.opened
         focusTarget: keys
         contentWidth: fittedContentWidth(Commons.Style.space(440))
-        contentHeight: fittedContentHeight(Math.min(Commons.Style.space(560), Math.max(Commons.Style.space(260), dashboard.desiredHeight)))
+        contentHeight: fittedContentHeight(Math.min(Commons.Style.space(640), Math.max(Commons.Style.space(260), dashboard.desiredHeight)))
         Item {
             id: keys
             anchors.fill: parent
