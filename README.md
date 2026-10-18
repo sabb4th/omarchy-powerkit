@@ -1,5 +1,7 @@
 # PowerKit
 
+Maintained by **Elias Sabat**.
+
 Battery care and power profiles for the **Omarchy Quattro** bar. PowerKit combines a Rust backend, a native QML panel, [batctl](https://github.com/Ooooze/batctl) charge limits and power-profiles-daemon profiles.
 
 ![PowerKit panel with simulated battery readings](preview.png)

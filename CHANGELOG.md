@@ -2,6 +2,8 @@
 
 ## 3.1.0
 
+- Corrected the project author and copyright attribution to Elias Sabat.
+
 - Replaced Capacity/Design with full-width CPU governor and energy-preference controls, including active/mixed values and hardware-advertised choices.
 - Added validated, authenticated CPU changes across active policies, Intel Performance/EPP handling and readback verification.
 - Removed hover tooltips; improved control-label contrast and spacing.

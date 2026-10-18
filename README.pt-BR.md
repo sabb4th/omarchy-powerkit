@@ -1,5 +1,7 @@
 # PowerKit
 
+Mantido por **Elias Sabat**.
+
 O projeto agora se chama **PowerKit** e o repositório é [`sabb4th/omarchy-powerkit`](https://github.com/sabb4th/omarchy-powerkit). Ele controla perfis de energia e cuidados com a bateria usando Rust, batctl e power-profiles-daemon, com interface inteiramente em inglês.
 
 ![Painel PowerKit com leituras simuladas](preview.png)

@@ -3,9 +3,9 @@
   "id": "io.github.sabb4th.powerkit",
   "name": "PowerKit",
   "version": "3.1.0",
-  "author": "Ângela Sabát",
+  "author": "Elias Sabat",
   "license": "MIT",
-  "description": "Battery care, charging controls and power profiles for the Omarchy bar. Rust, batctl and power-profiles-daemon.",
+  "description": "Battery care, CPU tuning and power profiles for the Omarchy bar. Rust, batctl and power-profiles-daemon.",
   "kinds": [
     "bar-widget"
   ],

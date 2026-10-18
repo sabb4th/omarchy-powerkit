@@ -3,6 +3,7 @@ name = "powerkit"
 version = "3.1.0"
 edition = "2021"
 license = "MIT"
+authors = ["Elias Sabat"]
 description = "Battery care and power profiles for the Omarchy desktop"
 repository = "https://github.com/sabb4th/omarchy-powerkit"
 

@@ -9,3 +9,15 @@ The marketplace's [publishing guide](https://plugins.omarchy.org/publish.html) r
 5. Follow the marketplace's automated validation and maintainer feedback. Do not claim a listing is approved until it appears in the catalogue.
 
 The root `preview.png` is an actual QML capture with simulated data, not a screenshot of private system details. No generated package or build cache is committed. The native installer clones the source launcher; it does not run the optional manual installer. Release tarballs replace the launcher with the compiled binary and include source for review.
+
+## Updating the existing listing
+
+PowerKit is already listed. Do not submit another new-plugin issue. After the release checks pass, open the marketplace's **Verify or update a listed plugin** form with:
+
+- Verification action: `Verify and publish a newer upstream commit`
+- Plugin ID: `io.github.sabb4th.powerkit`
+- Repository URL: `https://github.com/sabb4th/omarchy-powerkit`
+- Target commit: the full 40-character current upstream HEAD SHA (`git rev-parse HEAD`)
+- Verification acknowledgment: checked
+
+Describe the release and its current privileged operations in the notes. An update must be validated and accepted for that exact commit before the marketplace promotes its snapshot. The existing manual-setup installation status stays in place; do not claim that native dependencies are installed automatically or request its removal as part of this update.
