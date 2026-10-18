@@ -5,7 +5,7 @@
 - Replaced Capacity/Design with full-width CPU governor and energy-preference controls, including active/mixed values and hardware-advertised choices.
 - Added validated, authenticated CPU changes across active policies, Intel Performance/EPP handling and readback verification.
 - Removed hover tooltips; improved control-label contrast and spacing.
-- Added smooth level, charging-bolt, text, width and hover/open transitions with a stable charging-icon slot and no idle animation loop.
+- Added smooth level, charging-bolt, text, width and hover/open transitions with compact charging-only space and no idle animation loop.
 
 ## 3.0.0 · PowerKit
 

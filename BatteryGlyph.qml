@@ -5,7 +5,6 @@ Item {
     id: glyph
     property var percent: null
     property bool charging: false
-    property bool reserveBoltSpace: false
     property bool animated: true
     property color foreground: "#d6d8de"
     property color background: "#14181c"
@@ -13,7 +12,8 @@ Item {
     property bool alert: true
     readonly property int level: Display.level(percent)
     readonly property color fillColor: alert && level >= 0 && level <= 2 ? urgent : foreground
-    readonly property real batteryLeft: charging || reserveBoltSpace ? height * 0.75 : 0
+    property real batteryLeft: charging ? height * 0.6 : 0
+    Behavior on batteryLeft { enabled: glyph.animated; NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
     readonly property real fraction: percent === null || percent === undefined || !isFinite(percent) ? 0 : Math.max(0, Math.min(1, percent / 100))
     readonly property real batteryWidth: Math.max(0, width - batteryLeft)
     implicitWidth: 22 + batteryLeft

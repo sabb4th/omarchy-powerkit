@@ -50,7 +50,7 @@ Ui.BarWidget {
         labelVisible: false
         hasVisualContent: true
         fixedWidth: root.vertical ? root.barSize : Math.max(Commons.Style.space(30),
-                    parts.implicitWidth + Commons.Style.space(14))
+                    parts.implicitWidth + Commons.Style.space(12))
         text: root.label
         tooltipText: ""
         Behavior on fixedWidth {
@@ -68,13 +68,13 @@ Ui.BarWidget {
         Row {
             id: parts
             anchors.centerIn: parent
-            spacing: Commons.Style.space(6)
+            spacing: Commons.Style.space(4)
             Local.BatteryGlyph {
-                width: Commons.Style.space(21) + height * 0.75
+                width: Commons.Style.space(21) + (charging ? height * 0.6 : 0)
+                Behavior on width { enabled: root.animationsEnabled; NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                 height: button.fontSize * 1.05
                 anchors.verticalCenter: parent.verticalCenter
                 percent: root.battery ? root.battery.percent : null
-                reserveBoltSpace: true
                 animated: root.animationsEnabled
                 charging: !!root.battery && root.battery.status === "Charging"
                 foreground: button.foreground

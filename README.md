@@ -29,7 +29,7 @@ The panel shows health, charge cycles, CPU governor/energy preference, power and
 
 **Charge behaviour applies to the selected battery. Thresholds apply to all batteries through batctl.** Auto follows normal charging policy and limits. Inhibit charge pauses charging; power routing depends on hardware. Force discharge uses the battery even on AC power: select Auto to stop it. Behaviour is not saved or replayed by PowerKit. The persistence switch saves **thresholds only**. When persistent thresholds change, PowerKit updates the saved values too; a failed save is reported separately from live application.
 
-The charging indicator is a solid lightning bolt to the **left** of the battery. Its reserved space prevents a layout jump on AC transitions. Charge level, bolt visibility, display-format changes, hover and open states use short transitions; the fill remains solid. There is no hover tooltip and no continuous animation while idle.
+The charging indicator is a solid lightning bolt to the **left** of the battery. Its compact space expands smoothly only while charging, leaving no empty bolt slot on battery. Charge level, bolt visibility, display-format changes, hover and open states use short transitions; the fill remains solid. There is no hover tooltip and no continuous animation while idle.
 
 ## Permissions and dependencies
 

@@ -18,7 +18,7 @@ O backend compila uma vez no cache do usuário; Cargo pode precisar baixar as de
 
 Clique esquerdo abre o painel; direito alterna a aparência da barra; meio atualiza. Capacity e Design foram substituídos por controles de governador e preferência de energia da CPU, com valores ativos e opções suportadas. No driver Intel, selecione Powersave para ajustar a preferência quando Performance a bloquear. As alterações são temporárias, valem para todas as políticas de CPU e podem ser substituídas pelo perfil de energia.
 
-O painel não mostra mais janelas ao passar o mouse. O raio mantém espaço reservado, e as mudanças de carga, formato e destaque usam transições curtas, sem animação contínua em repouso.
+O painel não mostra mais janelas ao passar o mouse. O espaço do raio só aparece durante o carregamento, com expansão suave, e as mudanças de carga, formato e destaque usam transições curtas, sem animação contínua em repouso.
 
 O painel oferece perfis Saver → Balanced → Performance, modos Auto / Inhibit charge / Force discharge, indicadores da bateria e limites em uma seção expansível. O raio de carregamento fica à esquerda do ícone, sem preenchimento cinza.
 
