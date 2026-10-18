@@ -8,11 +8,15 @@ O projeto agora se chama **PowerKit** e o repositório é [`sabb4th/omarchy-powe
 
 ## Instalar
 
-Requer Omarchy Quattro, power-profiles-daemon configurado, `batctl-tui` do projeto Ooooze, Rust/Cargo para a instalação a partir do código, jq, coreutils e agente gráfico de autenticação polkit.
+Instale no Omarchy Quattro com um comando:
 
 ```bash
 omarchy plugin add https://github.com/sabb4th/omarchy-powerkit.git --enable
 ```
+
+No primeiro uso, se faltar alguma dependência, uma janela de terminal mostra o que será instalado e pede confirmação. O PowerKit usa o gerenciador do Omarchy para instalar os pacotes necessários, incluindo `batctl-tui` pelo AUR. Não é necessário executar `install.sh` separadamente. O mesmo preparo está integrado nesse instalador.
+
+Com sua confirmação, o preparo também ativa power-profiles-daemon se necessário, mas recusa trocar enquanto TLP, auto-cpufreq ou tuned estiver ativo. Não altera limites da bateria ou perfis de energia. Se cancelar ou ocorrer uma falha, execute `bash scripts/setup.sh` dentro da pasta do plugin para tentar novamente; a janela não se repete continuamente. O selo de instalação do marketplace depende da revisão dos mantenedores.
 
 O backend compila uma vez no cache do usuário; Cargo pode precisar baixar as dependências travadas no lockfile. Atualizações de código são recompiladas automaticamente. Releases incluem um binário pronto e checksums para quem prefere instalar sem compilador.
 

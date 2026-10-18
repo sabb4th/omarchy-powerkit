@@ -2,6 +2,7 @@
 # Source installations (including `omarchy plugin add`) build once into user cache.
 set -euo pipefail
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+bash "$root/scripts/setup.sh" --check || bash "$root/scripts/first-run.sh"
 digest=$(sha256sum "$root/Cargo.toml" "$root/Cargo.lock" "$root/src/main.rs" | sha256sum)
 cache_base=${XDG_CACHE_HOME:-$HOME/.cache}
 build_dir=$cache_base/omarchy-powerkit/builds/${digest%% *}

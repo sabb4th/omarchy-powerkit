@@ -8,15 +8,19 @@ Battery care and power profiles for the **Omarchy Quattro** bar. PowerKit combin
 
 ## Install
 
-Requires Omarchy Quattro's Quickshell plugin API, a configured `power-profiles-daemon`, Ooooze's **`batctl-tui`** (`/usr/bin/batctl`), Rust/Cargo for source installations, `jq`, coreutils and a running graphical polkit agent. The unrelated mesh-networking tool also named batctl is not supported. No packages or services are installed or enabled automatically.
+Install on Omarchy Quattro with:
 
 ```bash
 omarchy plugin add https://github.com/sabb4th/omarchy-powerkit.git --enable
 ```
 
-The marketplace/native installer clones this repository. `bin/powerkit` builds the backend on first use using the locked Cargo dependencies, then runs the cached executable. Compilation may take a little while and needs access to your configured Cargo registry; it never runs as root. Later source changes create a new build cache. There is no background downloader or external binary service.
+On first use, PowerKit checks its dependencies. If anything is missing, one terminal opens with an installation summary and a **Continue?** confirmation. Omarchy installs the missing Arch packages and Ooooze's `batctl-tui` from the AUR; authentication may be required. The unrelated mesh-networking `batctl` package is not accepted. No separate setup commands are needed.
 
-If Cargo is missing, install Rust using your normal package-management flow (on Omarchy, `omarchy pkg add rust`). For a build-free installation, download the Linux x86_64 archive and matching checksum from [Releases](https://github.com/sabb4th/omarchy-powerkit/releases), verify and unpack them, then run `bash install.sh --prebuilt bin/powerkit` inside the extracted directory. The archive's `bin/powerkit` is the compiled executable, not the source launcher.
+With your confirmation, setup also enables and starts `power-profiles-daemon` if necessary. It refuses to switch while TLP, auto-cpufreq or tuned is active. Battery limits and power profiles are not changed by setup. Omarchy's graphical polkit agent must be running for hardware controls.
+
+The Rust backend builds once as your normal user with locked Cargo dependencies, then runs from the user cache. Source updates rebuild automatically. Dependency installation and compilation require network access; subsequent monitoring does not. If setup is cancelled or fails, it does not reopen repeatedly: run `bash scripts/setup.sh` from the installed plugin directory to retry. `install.sh` uses the same dependency preparation; prebuilt releases skip compiler installation.
+
+Omarchy's native installer does not execute `install.sh`: first-use preparation is handled by the source launcher. The marketplace's installation label remains subject to maintainer review.
 
 ## Use
 

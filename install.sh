@@ -35,6 +35,12 @@ fi
 if [[ $migrate == true && -f $shell_config ]]; then
   jq -e 'type == "object"' "$shell_config" >/dev/null
 fi
+# Prepare dependencies before building; prebuilt installs do not need a compiler.
+if [[ -n $prebuilt ]]; then
+  bash "$root/scripts/setup.sh" --runtime
+else
+  bash "$root/scripts/setup.sh"
+fi
 # Build and validate before replacing the installed plugin.
 if [[ -z $prebuilt ]]; then
   command -v cargo >/dev/null || { echo 'Install Rust/Cargo, or use --prebuilt target/release/powerkit after a build.' >&2; exit 1; }

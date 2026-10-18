@@ -20,4 +20,4 @@ PowerKit is already listed. Do not submit another new-plugin issue. After the re
 - Target commit: the full 40-character current upstream HEAD SHA (`git rev-parse HEAD`)
 - Verification acknowledgment: checked
 
-Describe the release and its current privileged operations in the notes. An update must be validated and accepted for that exact commit before the marketplace promotes its snapshot. The existing manual-setup installation status stays in place; do not claim that native dependencies are installed automatically or request its removal as part of this update.
+Describe the release and its current privileged operations in the notes. An update must be validated and accepted for that exact commit before the marketplace promotes its snapshot. Native first-use dependency preparation must be reviewed before requesting removal of the manual-setup override. Submit the newer commit first, then request standard installation for that exact listed snapshot; only maintainers can approve the installation-label change.

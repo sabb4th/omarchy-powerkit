@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.2.0
+
+- Added confirmed first-use dependency preparation for native `omarchy plugin add` installations, with one terminal across widget instances.
+- Shared dependency installation with install.sh; prebuilt installs skip compiler installation.
+- Install missing Arch/AUR dependencies through Omarchy and enable power-profiles-daemon only after confirmation; block active competing services.
+- Remember failed/cancelled setup to avoid repeated prompts and document retry instructions.
+
 ## 3.1.0
 
 - Corrected the project author and copyright attribution to Elias Sabat.
