@@ -1,6 +1,15 @@
-# Validation · PowerKit 3.1.0
+# Validation · PowerKit 3.2.1
 
-Validated on 2026-10-15 with Omarchy Quattro and a ThinkPad battery backend.
+Validated on 2026-10-21 with Omarchy Quattro.
+
+## 3.2.1 health indicator and installation
+
+- Ten Rust tests, seven isolated distribution/setup tests, Clippy, rustfmt, JavaScript presentation checks and local Omarchy manifest validation pass.
+- The installer regression starts with missing runtime tools and checks that preparation runs before dependency checks; no real packages, services or hardware settings are changed.
+- The native confirmed preparation, cancellation suppression, competing-service checks and source-cache behavior remain covered by the distribution tests.
+- The footer reuses BatteryGlyph for live health, with theme colors, a readable percentage, missing-data fallback and a stale-data treatment. The existing bar middle-click refresh remains available.
+- The actual Quickshell runtime loads the panel without QML errors; preview.png uses simulated values.
+- Standard marketplace installation still requires an explicit exact-snapshot maintainer decision; source compatibility alone does not remove the manual-installation override.
 
 ## 3.1.0 CPU controls and visual refinement
 

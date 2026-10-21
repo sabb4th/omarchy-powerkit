@@ -26,6 +26,8 @@ Clique esquerdo abre o painel; direito alterna a aparência da barra; meio atual
 
 O painel não mostra mais janelas ao passar o mouse. O espaço do raio só aparece durante o carregamento, com expansão suave, e as mudanças de carga, formato e destaque usam transições curtas, sem animação contínua em repouso.
 
+O rodapé mostra a saúde da bateria com um pequeno ícone preenchido proporcionalmente e a porcentagem na cor de destaque do tema. O clique do meio na barra continua atualizando os dados.
+
 O painel oferece perfis Saver → Balanced → Performance, modos Auto / Inhibit charge / Force discharge, indicadores da bateria e limites em uma seção expansível. O raio de carregamento fica à esquerda do ícone, sem preenchimento cinza.
 
 Os modos valem para a bateria selecionada; limites do batctl valem para todas. Force discharge usa a bateria mesmo conectado à tomada; Auto encerra essa descarga forçada. O plugin não salva nem reaplica o modo: a persistência cobre somente os limites. Alterações de carga solicitam autenticação do sistema.

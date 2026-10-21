@@ -21,3 +21,5 @@ PowerKit is already listed. Do not submit another new-plugin issue. After the re
 - Verification acknowledgment: checked
 
 Describe the release and its current privileged operations in the notes. An update must be validated and accepted for that exact commit before the marketplace promotes its snapshot. Native first-use dependency preparation must be reviewed before requesting removal of the manual-setup override. Submit the newer commit first, then request standard installation for that exact listed snapshot; only maintainers can approve the installation-label change.
+
+The current standard-installation policy accepts a passing baseline or a matching installer-only maintainer review. PowerKit also declares privilege, package-manager and service-management capabilities, which can require a marketplace policy decision before the override can be removed. Preserve the real capabilities and document them in the request; do not remove working controls or disguise operations to change a scan result.

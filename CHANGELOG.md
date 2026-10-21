@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.2.1
+
+- Replaced the panel refresh button with a compact themed battery-health indicator, using the existing battery artwork and live health percentage. Middle-click refresh remains available on the bar.
+- Fixed optional installer dependency checks so first-use preparation can install missing tools before they are required.
+- Preserved the confirmed native installation flow, cached source builds and existing battery/CPU controls.
+
 ## 3.2.0
 
 - Added confirmed first-use dependency preparation for native `omarchy plugin add` installations, with one terminal across widget instances.

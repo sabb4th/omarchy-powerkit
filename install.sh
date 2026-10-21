@@ -20,11 +20,9 @@ while (( $# )); do
     *) echo 'Usage: bash install.sh [--prebuilt BINARY] [--migrate]' >&2; exit 2 ;;
   esac
 done
-for tool in omarchy omarchy-shell omarchy-plugin-validate powerprofilesctl omarchy-powerprofiles-set pkexec jq; do
+for tool in omarchy omarchy-shell omarchy-plugin-validate omarchy-powerprofiles-set; do
   command -v "$tool" >/dev/null || { echo "Missing dependency: $tool" >&2; exit 1; }
 done
-[[ -x /usr/bin/tee ]] || { echo "Missing dependency: /usr/bin/tee" >&2; exit 1; }
-[[ -x /usr/bin/batctl ]] || { echo 'Install batctl-tui (Ooooze/batctl), which provides /usr/bin/batctl.' >&2; exit 1; }
 [[ ! -L $target ]] || { echo "Symlink destination: $target" >&2; exit 1; }
 legacy=$config_base/omarchy/plugins/local.battery-studio
 shell_config=$config_base/omarchy/shell.json
@@ -32,14 +30,19 @@ if [[ -e $legacy || -L $legacy ]]; then
   [[ ! -L $legacy ]] || { echo "Refusing legacy symlink: $legacy" >&2; exit 1; }
   [[ $migrate == true ]] || { echo 'Legacy Battery Studio detected. Use --migrate to back up and replace its widget in place.' >&2; exit 2; }
 fi
-if [[ $migrate == true && -f $shell_config ]]; then
-  jq -e 'type == "object"' "$shell_config" >/dev/null
-fi
 # Prepare dependencies before building; prebuilt installs do not need a compiler.
 if [[ -n $prebuilt ]]; then
   bash "$root/scripts/setup.sh" --runtime
 else
   bash "$root/scripts/setup.sh"
+fi
+for tool in powerprofilesctl pkexec jq; do
+  command -v "$tool" >/dev/null || { echo "Missing dependency after setup: $tool" >&2; exit 1; }
+done
+[[ -x /usr/bin/tee ]] || { echo "Missing dependency: /usr/bin/tee" >&2; exit 1; }
+[[ -x /usr/bin/batctl ]] || { echo 'Install batctl-tui (Ooooze/batctl), which provides /usr/bin/batctl.' >&2; exit 1; }
+if [[ $migrate == true && -f $shell_config ]]; then
+  jq -e 'type == "object"' "$shell_config" >/dev/null
 fi
 # Build and validate before replacing the installed plugin.
 if [[ -z $prebuilt ]]; then

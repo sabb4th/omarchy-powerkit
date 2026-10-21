@@ -101,6 +101,34 @@ if [[ $* == 'plugin list --json' ]]; then printf '[]\\n'; fi
         self.assertEqual(result.returncode, 2, result.stderr)
         self.assertFalse(self.calls.exists())
 
+    def test_installer_prepares_missing_runtime_tools_before_checking_them(self):
+        binary = self.setup_installer()
+        fixture = self.base / "installer"
+        (fixture / "scripts").mkdir(parents=True)
+        for name in ("install.sh", "BarWidget.qml", "BatteryGlyph.qml", "BatteryModel.qml",
+                     "Dashboard.qml", "Panel.qml", "Display.js", "manifest.json", "qmldir", "LICENSE"):
+            shutil.copy2(ROOT / name, fixture / name)
+        installer = fixture / "install.sh"
+        installer.write_text(installer.read_text().replace("/usr/bin/batctl", str(self.shims / "batctl")))
+        for name in ("powerprofilesctl", "pkexec"):
+            (self.shims / name).unlink()
+        for name in ("bash", "dirname", "realpath", "mkdir", "install", "mv", "date", "rm", "cp", "chmod", "mktemp"):
+            (self.shims / name).symlink_to(shutil.which(name))
+        # Only the host tools exist initially; setup supplies the runtime tools.
+        self.env["PATH"] = str(self.shims)
+        (fixture / "scripts/setup.sh").write_text('''#!/usr/bin/env bash
+printf 'prepare %s\\n' "$*" >> "$TEST_CALLS"
+install -m 0755 /usr/bin/true "${PATH}/powerprofilesctl"
+install -m 0755 /usr/bin/true "${PATH}/pkexec"
+install -m 0755 /usr/bin/jq "${PATH}/jq"
+''')
+        result = subprocess.run([str(self.shims / "bash"), str(fixture / "install.sh"),
+                                 "--prebuilt", str(binary)], env=self.env, text=True,
+                                capture_output=True, timeout=20)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.calls.read_text().splitlines()[0], "prepare --runtime")
+        self.assertTrue((self.base / "config/omarchy/plugins" / PLUGIN_ID / "Dashboard.qml").exists())
+
     def test_setup_installs_missing_aur_dependency_after_confirmation(self):
         self.ready_dependencies()
         marker = self.base / "installed"

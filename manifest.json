@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.sabb4th.powerkit",
   "name": "PowerKit",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "author": "Elias Sabat",
   "license": "MIT",
   "description": "Battery care, CPU tuning and power profiles for the Omarchy bar. Rust, batctl and power-profiles-daemon.",
