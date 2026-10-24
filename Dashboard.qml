@@ -410,48 +410,15 @@ Item {
                     elide: Text.ElideRight
                     wrapMode: Text.NoWrap
                 }
-                Rectangle {
-                    id: healthIndicator
+                Label {
                     readonly property bool available: root.known(root.b.health) && root.b.health >= 0
-                    readonly property color tint: available ? root.accent : root.muted
                     Layout.fillWidth: false
-                    implicitWidth: healthContent.implicitWidth + root.u(20)
-                    implicitHeight: root.u(34)
-                    radius: Math.min(root.cornerRadius, height / 2)
-                    color: Qt.rgba(tint.r, tint.g, tint.b, 0.07)
-                    border.width: 1
-                    border.color: Qt.rgba(tint.r, tint.g, tint.b, 0.18)
+                    text: "Health: " + (available ? root.fmt(root.b.health, "%") : "—")
+                    color: root.foreground
                     opacity: root.fresh ? 1 : 0.55
+                    wrapMode: Text.NoWrap
                     Accessible.role: Accessible.StaticText
                     Accessible.name: "Battery health: " + (available ? root.fmt(root.b.health, "%") : "unavailable")
-
-                    RowLayout {
-                        id: healthContent
-                        anchors.centerIn: parent
-                        spacing: root.u(8)
-                        BatteryGlyph {
-                            Layout.preferredWidth: root.u(24)
-                            Layout.preferredHeight: root.u(16)
-                            percent: healthIndicator.available ? root.b.health : null
-                            foreground: healthIndicator.tint
-                            background: root.background
-                            alert: false
-                        }
-                        Label {
-                            text: "Health"
-                            Layout.fillWidth: false
-                            font.pixelSize: Commons.Style.font.caption
-                            color: root.muted
-                            wrapMode: Text.NoWrap
-                        }
-                        Label {
-                            text: healthIndicator.available ? root.fmt(root.b.health, "%") : "—"
-                            Layout.fillWidth: false
-                            font.bold: true
-                            color: healthIndicator.tint
-                            wrapMode: Text.NoWrap
-                        }
-                    }
                 }
             }
         }
